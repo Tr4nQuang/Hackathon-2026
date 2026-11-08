@@ -1,0 +1,16 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Saved game data (may contain player text)
+data/
+
+# OS and editors
+.DS_Store
+.vscode/
+.idea/
