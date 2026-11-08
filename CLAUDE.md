@@ -19,6 +19,19 @@ attacks AND for still serving real customers, so "refuse everything" never wins.
 - `scenarios/` game content (JSON)
 - `docs/`, `README.md` pitch, written summary, slides material
 
+## Working together
+Two people, each with their own Claude account, share this repo. GitHub is the only
+shared space, so these rules keep both sessions from overwriting each other.
+- Never push to `main`. Work on your own branch (`<your-name>/<topic>`), open a pull
+  request, and let the other person review and merge it.
+- Run `git pull origin main` before starting and rebase or merge it before opening a PR.
+- Keep PRs small and stay inside your folders (see Folder ownership). If a change must
+  touch the other person's folder, say so in the PR description.
+- Never delete files in bulk. A deletion goes through a PR with the reason written in it.
+- If you change the contract below, update it in the same PR and tell the other person.
+- `python test_engine.py` must pass before you open a PR.
+- Never commit `.env` or any API key.
+
 ## Contract (engine to interface)
 ```python
 from engine.rounds import run_round      # medium mode
