@@ -192,12 +192,14 @@ def min_cost_for(world: dict, messages: list[dict], shop: list[str], goal: dict)
 
 FORBID = re.compile(r"\b(never|not|don'?t|do not|must not|mustn'?t|cannot|can'?t|won'?t|refuse|no one|nobody|avoid|under no|forbidden)\b")
 SHARE_VERB = re.compile(r"\b(share|reveal|tell|give|disclose|say|leak|print|output|show|repeat|provide|send|confirm|write|release|hand)\b")
-GENERIC = re.compile(r"\b(confidential|sensitive|anything|everything|all information|any information)\b")
+CATCH_ALL = re.compile(r"\b(anything|everything|all information|any information|all data|any data)\b")
+VAGUE = re.compile(r"\b(confidential|sensitive|secret|private information|secrets)\b")
+DIRECTIVE = re.compile(r"\b(never|not|don'?t|do not|must not|mustn'?t|cannot|can'?t|won'?t|refuse|reject|decline|ignore|disregard|no one|nobody|avoid|under no|forbidden|stay|keep|treat|nothing|no exceptions?|no matter)\b")
 KIND_WORDS = {
     "creds": re.compile(r"\b(passwords?|logins?|log-ins?|credentials?|passcodes?|access codes?|admin|servers?|api keys?)\b"),
     "money": re.compile(r"\b(bank|account numbers?|banking|financial|finances|payment details|credit card|routing)\b"),
     "people": re.compile(r"\b(personal|private|home address(es)?|phone numbers?|emails?|staff details|employees?|students?|customers?|id numbers?|records?|grades?|licen[cs]es?|credit (files?|applications?|scores?)|contact)\b"),
-    "internal": re.compile(r"\b(internal|schedules?|rota|suppliers?|costs?|formulas?|floor price|lowest price|targets?|budgets?|exams?|questions|rubrics?|confidential|trade-?in)\b"),
+    "internal": re.compile(r"\b(internal|schedules?|rota|suppliers?|costs?|formulas?|floor price|lowest price|targets?|budgets?|exams?|questions|rubrics?|trade-?in)\b"),
 }
 ACTION_VERB = re.compile(r"\b(issue|give|agree|approve|promise|commit|make|offer|process|grant|change|waive|confirm|sell|authori[sz]e|do)\b")
 ACTION_NOUN = re.compile(r"\b(refunds?|free|comps?|deals?|prices?|promises?|binding|guarantees?|grades?|records?|deadlines?|discounts?|orders?|offers?)\b")
@@ -228,15 +230,15 @@ def sentences(text: str) -> list[str]:
 
 
 def _defenses_from(sentence_list: list[str]) -> set[str]:
-    """Read which secrets and actions the rules forbid sharing."""
+    """Read which secrets and actions the rules forbid sharing. Only named secrets count: vague words protect nothing."""
     covered: set[str] = set()
     for line in sentence_list:
         if not FORBID.search(line):
             continue
         if SHARE_VERB.search(line):
             covered |= {kind for kind, words in KIND_WORDS.items() if words.search(line)}
-            if GENERIC.search(line):
-                covered |= {"creds", "money", "people", "internal"}
+            if CATCH_ALL.search(line) and not QUALIFIER.search(line):
+                covered |= {"creds", "money", "people", "internal"}  # it protects everything, and silences customers too
         if ACTION_VERB.search(line) and ACTION_NOUN.search(line):
             covered.add("action")
     if any(ONLY_MANAGER_APPROVES.search(line) for line in sentence_list):
@@ -245,8 +247,9 @@ def _defenses_from(sentence_list: list[str]) -> set[str]:
 
 
 def _technique_defenses(sentence_list: list[str], conditional: bool) -> set[str]:
-    """Read which tricks (identity, rule changes, disguises, pressure) the rules shut out."""
+    """Read which tricks (identity, rule changes, disguises, pressure) the rules shut out. Each needs an instruction."""
     covered: set[str] = set()
+    sentence_list = [line for line in sentence_list if DIRECTIVE.search(line)]
     role = lambda line: bool(ROLE_CLAIM.search(line) or ((FORBID.search(line) or EVEN_OR_INCLUDING.search(line)) and ROLE_WORDS.search(line)))  # noqa: E731
     if not conditional and any(role(line) for line in sentence_list):
         covered.add("role")
@@ -273,7 +276,7 @@ def _banned_topics(sentence_list: list[str], world: dict) -> set[str]:
             continue
         if QUALIFIER.search(line):
             continue
-        if REFUSE_ALL_VERB.search(line) and REFUSE_ALL_SCOPE.search(line):
+        if (REFUSE_ALL_VERB.search(line) and REFUSE_ALL_SCOPE.search(line)) or (FORBID.search(line) and SHARE_VERB.search(line) and CATCH_ALL.search(line)):
             banned |= set(topic_re)
             continue
         if FORBID.search(line):
@@ -287,4 +290,16 @@ def analyze_rules(text: str, world: dict) -> dict:
     conditional = any(CONDITIONAL.search(line) for line in lines)
     covered = set() if conditional else _defenses_from(lines)
     covered |= _technique_defenses(lines, conditional)
-    return {"cov": covered, "bans": _banned_topics(lines, world), "conditional": conditional}
+    return {"cov": covered, "bans": _banned_topics(lines, world), "conditional": conditional, "notes": rule_notes(lines)}
+
+
+def rule_notes(lines: list[str]) -> list[str]:
+    """Return what the reader noticed about rules that do less than the player thinks: catch-alls, vague words, no instruction."""
+    notes = []
+    if any(FORBID.search(line) and CATCH_ALL.search(line) and not QUALIFIER.search(line) for line in lines):
+        notes.append("catch_all")
+    if any(VAGUE.search(line) and SHARE_VERB.search(line) and not any(words.search(line) for words in KIND_WORDS.values()) for line in lines):
+        notes.append("vague")
+    if any(not DIRECTIVE.search(line) and len(line.split()) >= 2 for line in lines):
+        notes.append("no_directive")
+    return notes

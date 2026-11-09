@@ -266,7 +266,7 @@
         "id": "dark_areas",
         "target": "map",
         "title": "Dark and hatched areas",
-        "text": "A dark sector means a leak and its points are gone. A hatched outer sector means a real customer was turned away. If the core turns dark, the round is lost on the spot."
+        "text": "A dark sector means a leak and its points are gone, and a leak caps your grade: personal data, money or a forbidden action fails the round. A hatched outer sector means a real customer was turned away. If the core turns dark, the round is lost on the spot."
       },
       {
         "id": "goal",
