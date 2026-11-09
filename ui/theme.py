@@ -17,7 +17,7 @@ TOKENS = """
   --good: #1b7653; --good-soft: #dff1e8; --bad: #b4302a; --bad-soft: #fae4e2;
   --warn: #8f5e0e; --warn-soft: #faefd9; --attack: #8a2f4d; --attack-soft: #f7e6ec;
   --t0: #dce9f7; --t1: #afcbee; --t2: #5f93d6; --t3: #1f4f92; --t2-ink: #ffffff; --t3-ink: #ffffff;
-  --breach: #1e252c; --breach-ink: #f2766d; --gold: #b7791f; --shadow: 0 1px 2px rgba(18,32,43,.06), 0 6px 20px rgba(18,32,43,.06);
+  --breach: #1e252c; --breach-ink: #f2766d; --gold: #b7791f; --hot: #c93c3c; --shadow: 0 1px 2px rgba(18,32,43,.06), 0 6px 20px rgba(18,32,43,.06);
   --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
   --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
@@ -30,7 +30,7 @@ TOKENS = """
     --good: #52c59a; --good-soft: #123329; --bad: #f2766d; --bad-soft: #3a1a19;
     --warn: #e5b252; --warn-soft: #352812; --attack: #ee8fae; --attack-soft: #381c27;
     --t0: #1b2f45; --t1: #244a72; --t2: #3570b5; --t3: #8cbbf2; --t2-ink: #e4ecf2; --t3-ink: #08131c;
-    --breach: #040709; --breach-ink: #f2766d; --gold: #e5b252; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+    --breach: #040709; --breach-ink: #f2766d; --gold: #e5b252; --hot: #f2766d; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
   }
 }
 """
@@ -86,7 +86,7 @@ SHELL = """
 
 HOME = """
 .st-key-hero h1 { font-size: clamp(2rem, 4.4vw, 3.2rem); line-height: 1.08; margin: .3rem 0 .8rem; }
-.st-key-hero h1 strong { color: var(--accent); font-weight: 800; }
+.st-key-hero h1 strong { color: var(--hot); font-weight: 800; }
 [class*="st-key-lede"] p { font-size: 1.1rem; color: var(--muted); max-width: 58ch; }
 [class*="st-key-mode_"] { background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
   padding: 1.1rem; transition: border-color .15s ease, transform .15s ease; height: 100%; }
@@ -94,6 +94,10 @@ HOME = """
 [class*="st-key-gtile_"] { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: .75rem .9rem; min-height: 7.5rem; }
 [class*="st-key-gtile_"] p { font-size: .85rem; color: var(--muted); margin: 0; }
 [class*="st-key-gtile_"] strong { color: var(--ink); font-size: 1rem; }
+[class*="st-key-gtile_s"] strong { color: var(--gold); letter-spacing: .08em; }
+[class*="st-key-gtile_s"] em { font-style: normal; font-weight: 700; margin-left: -.08em; color: color-mix(in srgb, var(--gold) 40%, var(--muted)); letter-spacing: .08em; }
+.st-key-gtile_perfect strong { color: var(--gold); }
+.st-key-gtile_fail strong { color: var(--bad); }
 .st-key-levelhead { max-width: 560px; margin: 0 auto; width: 100%; }
 .st-key-levelpath { position: relative; max-width: 560px; margin: 0 auto; width: 100%; gap: 0; }
 .st-key-pathsvg { position: absolute; top: 0; left: 0; width: 100%; z-index: 0; pointer-events: none; }
@@ -134,11 +138,13 @@ PLAY = """
 .st-key-tally [data-testid="stMetricValue"] { font-size: 1.4rem; justify-content: center; }
 .st-key-tally [data-testid="stMetricLabel"] { justify-content: center; }
 .legend-row p { font-size: .8rem; color: var(--muted); }
-/* The chat looks like a phone: a bezel, a speaker slot and a status bar on top, a home bar below, a fixed height. */
+/* The chat looks like a phone (iPhone 13 Pro screen, 390 by 844): a bezel, a speaker slot over the header, a home bar below. */
 .st-key-panel_chat { padding: 0 !important; gap: 0; overflow: hidden; border-radius: 34px; border: 6px solid color-mix(in srgb, var(--ink) 18%, var(--surface));
-  background: var(--surface); flex: none !important; height: 44rem !important; min-height: 44rem; max-height: 88vh; box-shadow: var(--shadow); }
-.st-key-panel_chat::before { content: ""; display: block; flex: none; height: 1.5rem; background: linear-gradient(var(--line), var(--line)) center / 4.2rem .32rem no-repeat, var(--bean-soft); }
-.st-key-panel_chat::after { content: ""; display: block; flex: none; height: 1.4rem; background: linear-gradient(var(--line), var(--line)) center / 6.5rem .3rem no-repeat, var(--surface); }
+  background: var(--surface); flex: none !important; width: min(100%, 380px, calc(80vh * 390 / 844)) !important; aspect-ratio: 390 / 844; height: auto; min-height: 0;
+  max-height: 80vh; margin: 0 auto; box-shadow: var(--shadow); }
+/* align-self: the panel aligns items to the start, which left these empty bars 0px wide, so the white panel showed through. */
+.st-key-panel_chat::before { content: ""; display: block; flex: none; align-self: stretch; height: 1.5rem; background: linear-gradient(var(--line), var(--line)) center / 4.2rem .32rem no-repeat, var(--bean-soft); }
+.st-key-panel_chat::after { content: ""; display: block; flex: none; align-self: stretch; height: 1.4rem; background: linear-gradient(var(--line), var(--line)) center / 6.5rem .3rem no-repeat, var(--surface); }
 .st-key-chat_head { border-bottom: 1px solid var(--line); padding: .35rem 1rem .75rem; background: var(--bean-soft); flex: none; }
 .cda-head { display: flex; align-items: center; gap: .7rem; min-width: 0; }
 .cda-logo { width: 2.1rem; height: 2.1rem; border-radius: 8px; background: var(--bean); display: grid; place-items: center; flex: none; }
@@ -200,13 +206,24 @@ ARENA = """
 [class*="st-key-sys_alarm"] * { color: #ffffff; font-weight: 700; letter-spacing: .06em; }
 .st-key-bub_bot_typing { opacity: .7; }
 .st-key-guide_box { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: .8rem 1rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
-.st-key-coach_avatar { width: 2.2rem !important; height: 2.2rem !important; flex: none; border-radius: 50%; background: var(--accent);
-  display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.st-key-coach_avatar p { color: var(--accent-ink) !important; font-weight: 800; margin: 0; }
+.cda-coach { display: grid; place-items: center; flex: none; width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--accent);
+  color: var(--accent-ink); font-family: var(--f-body); font-weight: 800; font-size: 1rem; line-height: 1; margin-top: -.3rem; }  /* centred on the step title */
 [class*="st-key-world_"] { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: .6rem 1rem; margin-top: 1rem; gap: 0; }
 [class*="st-key-note_efficiency"] { border-left: 5px solid var(--accent); }
 [class*="st-key-note_clean"] { border-left: 5px solid var(--good); }
 .st-key-panel_report { gap: .9rem; }
+/* Settings: the chat speed radio drawn as one pill with segments, the same height as the pill buttons. */
+.st-key-speed_seg [role="radiogroup"] { display: inline-flex; flex-wrap: nowrap; gap: 0; padding: 3px; border: 1px solid var(--line);
+  border-radius: 999px; background: var(--surface); }
+.st-key-speed_seg [role="radiogroup"] label { margin: 0; padding: 0 1.15rem; min-height: calc(2.5rem - 8px); border-radius: 999px;
+  display: flex; align-items: center; cursor: pointer; transition: background .12s ease; }
+.st-key-speed_seg [role="radiogroup"] label > div:last-child > div:first-child { display: none; }  /* the radio dot */
+.st-key-speed_seg [role="radiogroup"] label p { font-weight: 700; color: var(--ink); margin: 0; padding: 0 !important; }
+.st-key-speed_seg [role="radiogroup"] label:hover { background: var(--surface-2); }
+.st-key-speed_seg [role="radiogroup"] label:has(input:checked) { background: var(--accent); }
+.st-key-speed_seg [role="radiogroup"] label:has(input:checked) p { color: var(--accent-ink); }
+.st-key-speed_seg [role="radiogroup"] label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.st-key-panel_progress .stButton > button { min-height: 2.5rem; padding: 0 1.15rem; }
 """
 
 CSS = f"<style>{FONTS}{TOKENS}{PAGE}{SHELL}{HOME}{PLAY}{RESULTS}{ARENA}</style>"
