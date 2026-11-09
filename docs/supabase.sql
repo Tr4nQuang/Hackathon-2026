@@ -50,7 +50,7 @@ grant insert on table public.plays to anon;
 -- No select policy on purpose: the public key can insert but never read.
 
 -- Upgrade an existing table to engine_version 3.0.0 (live shifts). Safe to run more than once.
--- Level rows now keep the rules text too; visits holds one record per visitor (chat texts only with live AI).
+-- Level rows now keep the rules text too; visits holds one record per visitor (attack and reply texts, contact details removed).
 alter table plays add column if not exists words int;
 alter table plays add column if not exists word_budget int;
 alter table plays add column if not exists blocks_used int;

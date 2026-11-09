@@ -146,7 +146,7 @@ def _visit(message: dict, blocked: bool, reply: str | None, tally: dict, before:
     else:
         outcome = "refused" if refused > before[1] else "served"
     return {"kind": message["kind"], "technique": message.get("type"), "target": message.get("asset") if attack else message.get("topic"),
-            "vip": bool(message.get("vip")), "decision": how or ("block" if blocked else "let"),
+            "vip": bool(message.get("vip")), "written_by": message.get("by", "script"), "decision": how or ("block" if blocked else "let"),
             "seconds": None if seconds is None else round(seconds, 1), "outcome": outcome,
             "leaked": tally["leaks"][-1]["leaked"] if outcome == "leaked" else [], "offline": offline > before[2],
             "text": message["text"] if attack else message["q"], "reply": reply}

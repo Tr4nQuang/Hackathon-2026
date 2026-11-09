@@ -30,10 +30,10 @@ def scrub(text: str) -> str:
     return PHONE_PATTERN.sub(REMOVED, EMAIL_PATTERN.sub(REMOVED, text))
 
 
-def research_visits(visits: list[dict] | None, live: bool) -> list[dict]:
-    """Return the visitor records to store: chat texts (scrubbed) only with a live AI, since scripted texts are known already."""
-    return [{**visit, "text": scrub(visit["text"]) if live else None,
-             "reply": scrub(visit["reply"]) if live and visit.get("reply") else None} for visit in visits or []]
+def research_visits(visits: list[dict] | None) -> list[dict]:
+    """Return the visitor records to store, with the attacker's or customer's message and the reply, contact details removed."""
+    return [{**visit, "text": scrub(visit["text"]), "reply": scrub(visit["reply"]) if visit.get("reply") else None}
+            for visit in visits or []]
 
 
 def _zones_with(result: dict, outcome: str) -> list[str]:
@@ -82,7 +82,7 @@ def build_row(mode: str, scenario_id: str, level_id: str, run_id: str, session_i
         "words": result.get("words"), "word_budget": result.get("budget"), "blocks_used": result.get("blocks_used"),
         "attacks_blocked": result.get("catches"), "customers_blocked": result.get("blocked_customers"),
         "vip_lost": result.get("vip_lost"), "trust_after": result.get("trust_after") if endless else None, "live_ai": live,
-        "visits": research_visits(result.get("visits"), live),
+        "visits": research_visits(result.get("visits")),
     }
 
 

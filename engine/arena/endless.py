@@ -171,7 +171,7 @@ def build_section(section: int, seed: int, prev_rules: str = "", texts: list[str
     plan = plan_attacks(world, spec, prev_rules, rnd)
     if texts:
         padded = list(texts) + [""] * len(plan["attacks"])
-        plan["attacks"] = [{**attack, "text": text} if text else attack for attack, text in zip(plan["attacks"], padded)]
+        plan["attacks"] = [{**attack, "text": text, "by": "ai"} if text else attack for attack, text in zip(plan["attacks"], padded)]
     topics = shuffle(list(world["customers"]), rnd)[: spec["customers"]]
     customers = [make_customer(world, topic, int(rnd.random() * 2)) for topic in topics]
     messages = customer_first(shuffle(plan["attacks"] + customers, rnd))

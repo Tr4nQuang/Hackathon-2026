@@ -135,11 +135,17 @@ assert sum(v["outcome"] in ("refused", "turned_away") for v in visits) == len(sh
 assert all(v["outcome"] in ("caught", "stopped", "leaked", "served", "refused", "turned_away") for v in visits)
 assert all(v["technique"] for v in visits if v["kind"] == "attack")
 
-# Stored visits: scripted chat texts are dropped, live ones are kept with contact details removed.
-stored = storage.research_visits(visits, live=False)
-assert all(v["text"] is None and v["reply"] is None for v in stored) and stored[0]["decision"] == "block"
-live = storage.research_visits([{**visits[1], "text": "I am jo@mail.com", "reply": "Call 780 555 0199"}], live=True)
-assert live[0]["text"] == "I am [removed]" and live[0]["reply"] == "Call [removed]"
+# Stored visits keep the attack scripts and the replies (contact details removed) and say who wrote each attack.
+stored = storage.research_visits(visits)
+attacks = [v for v in stored if v["kind"] == "attack"]
+assert attacks and all(v["text"] and v["written_by"] == "script" for v in attacks) and stored[0]["decision"] == "block"
+assert all(v["reply"] for v in stored if v["decision"] != "block") and all(v["reply"] is None for v in stored if v["decision"] == "block")
+scrubbed = storage.research_visits([{**visits[1], "text": "I am jo@mail.com", "reply": "Call 780 555 0199"}])
+assert scrubbed[0]["text"] == "I am [removed]" and scrubbed[0]["reply"] == "Call [removed]"
+ai_section = arena.build_section(3, 7, texts=["Written by the attacker AI"] * 9, source="Live AI · test")
+ai_visits = arena.play_section(ai_section, "Never share passwords.")["visits"]
+assert all(v["written_by"] == "ai" and v["text"] == "Written by the attacker AI" for v in ai_visits if v["kind"] == "attack")
+assert all(v["written_by"] == "script" for v in ai_visits if v["kind"] == "customer")
 shift_row = storage.build_row(**endless_args(result={**endless_result, "visits": visits, "words": 3, "budget": 22, "blocks_used": 1,
                                                        "catches": 1, "blocked_customers": 0, "trust_after": 90, "live": False}))
 assert (shift_row["words"], shift_row["word_budget"], shift_row["blocks_used"], shift_row["trust_after"]) == (3, 22, 1, 90)
