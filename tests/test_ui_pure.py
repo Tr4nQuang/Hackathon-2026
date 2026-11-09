@@ -252,10 +252,10 @@ def test_the_cooldown_only_applies_to_live_ai() -> None:
     assert endless.COOLDOWN_SECONDS == 30
 
 
-def test_settings_texts_never_mention_a_key_value() -> None:
-    """The AI help names the .env file and has no field for a key, and the speeds are the three of the original."""
-    assert ".env" in settings.AI_HELP and "never typed into the game" in settings.AI_HELP
+def test_settings_speeds_and_no_ai_panel() -> None:
+    """The speeds are the three of the original, and the AI connection panel is gone."""
     assert settings.SPEEDS == ("normal", "fast", "instant")
+    assert not hasattr(settings, "AI_HELP") and not hasattr(settings, "connection_panel")
 
 
 if __name__ == "__main__":

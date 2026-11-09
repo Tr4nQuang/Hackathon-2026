@@ -1,14 +1,10 @@
-"""Game settings: chat speed, resetting level progress, and the AI and storage status."""
+"""Game settings: chat speed and resetting the saved progress."""
 
 import streamlit as st
 
-from ui import common, data, progress
+from ui import common, progress
 
 SPEEDS = ("normal", "fast", "instant")
-AI_HELP = ("The API key is never typed into the game. It is read from the .env file on the computer that runs the game, "
-           "and that file is never committed. To switch on live AI, copy .env.example to .env, set USE_FAKE_AI=false, "
-           "add your own GEMINI_API_KEY and restart the game.")
-STORAGE_HELP = "Anonymous results are only stored when you tick the box on a report, and only if SUPABASE_URL and SUPABASE_KEY are set in .env."
 PROGRESS_NOTE = ("Level stars, best scores and Endless section bests are saved only in this browser on this computer, "
                  "and never sent anywhere.")
 
@@ -59,16 +55,6 @@ def progress_panel() -> None:
             reset.button("Reset progress", key="set_reset", on_click=ask_reset)
 
 
-def connection_panel() -> None:
-    """Show whether live AI and result storage are on. It never shows a key and has no field for one."""
-    with st.container(key="panel_connection"):
-        head, chip = st.columns([3, 2], vertical_alignment="center")
-        head.subheader("AI connection")
-        chip.caption(f"Live AI ready · {data.live.model_name()}" if data.live.is_live() else "Built-in scripts · USE_FAKE_AI=true")
-        st.write(AI_HELP)
-        st.caption(("Result storage is set up. " if data.storage_configured() else "Result storage is not set up. ") + STORAGE_HELP)
-
-
 def settings_screen() -> None:
     """Show the game settings."""
     _, middle, _ = st.columns([1, 8, 1])
@@ -77,4 +63,3 @@ def settings_screen() -> None:
         st.header("Game settings")
         speed_panel()
         progress_panel()
-        connection_panel()

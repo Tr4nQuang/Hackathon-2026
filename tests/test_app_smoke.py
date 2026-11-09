@@ -712,15 +712,13 @@ def test_the_endless_lobby_shows_the_saved_numbers() -> None:
     assert any("Score 750 · Cleared 2" in m.value for m in at.markdown)
 
 
-def test_the_settings_show_the_connection_without_any_key_field() -> None:
-    """The AI panel names the mode and the .env file, there is no text field for a key, and storage is never shown as a value."""
+def test_the_settings_have_no_ai_panel_and_no_key_field() -> None:
+    """Settings shows only chat speed and progress: no AI connection panel and no text field for a key."""
     at = new_app()
     click(at, "nav_settings")
-    assert any("Built-in scripts" in c.value for c in at.caption) and any(".env" in m.value for m in at.markdown)
+    assert not [s for s in at.subheader if s.value == "AI connection"]
     assert not [t for t in at.text_input] and not [t for t in at.text_area]
-    with patched(data, storage_configured=lambda: True), patched(data.live, is_live=lambda: True):
-        at.run()
-        assert any("Live AI ready" in c.value for c in at.caption) and any("Result storage is set up" in c.value for c in at.caption)
+    assert at.radio(key="speed_pick") and at.button(key="set_reset")
 
 
 if __name__ == "__main__":
