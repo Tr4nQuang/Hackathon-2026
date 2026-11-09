@@ -6,7 +6,7 @@ from functools import lru_cache
 
 import streamlit as st
 
-from ui import data
+from ui import data, progress
 
 STAR = "★"
 BOT_NAME = "Beanie"
@@ -114,6 +114,7 @@ def new_run(scenario_id: str, mode: str, source_id: str, chosen_rules: list[str]
     state["attempts"][source_id] = state["attempts"].get(source_id, 0) + 1
     if mode == "level" and grade["stars"] >= 1:
         state["progress"][source_id] = max(state["progress"].get(source_id, 0), grade["stars"])
+        progress.request_save()
     state["run"] = {
         "run_id": str(uuid.uuid4()), "mode": mode, "scenario_id": scenario_id, "level_id": source_id,
         "chosen_rules": chosen_rules, "player_rules": player_rules, "package_index": package_index,
