@@ -1,525 +1,263 @@
-# =====================================================================
-# server.py
-# Local game server for Chatbot Defense Arena on 127.0.0.1:8000.
-# Serves the modular ES-Module SPA (index.html, css/, data/, js/),
-# stores the Anthropic API key and developer passcode in a local .env
-# file (owner-only 0600 permissions, never exposed over HTTP), maintains
-# a local record board in records.json, and proxies all live AI calls
-# (/api/ai/chatbot and /api/ai/attacks) so the browser never receives
-# the raw API key.
-# =====================================================================
+"""Local game server for the browser game: serves index.html, css/, data/ and js/, and answers /api/*.
+
+It is the Python side of the browser game. All the game's AI calls go through call_ai() in engine/ai.py (Gemini, the key
+stays in .env and never leaves this computer), the record board is engine/records.py (the same file the Streamlit game
+uses) and anonymous play storage is engine/storage.py. There is no page for typing a key.
+
+Run: python server.py   then open http://localhost:8000
+"""
 
 import http.server
 import json
 import mimetypes
 import os
 import re
-import secrets
-import stat
-import time
 import urllib.parse
+import uuid
 from pathlib import Path
 
+from engine import records
+from engine.ai import GEMINI_MODEL, call_ai
+from engine.arena import live
+from engine.storage import record_play
+
 ROOT_DIR = Path(__file__).resolve().parent
-ENV_PATH = ROOT_DIR / ".env"
-RECORDS_PATH = ROOT_DIR / "records.json"
-
 HOST = "127.0.0.1"
-PORT = 8000
-
-# Models offered in the Settings -> Developer dropdown (matching handoff spec).
-MODELS = [
-    "claude-sonnet-4-5",
-    "claude-haiku-4-5",
-    "claude-opus-4-5",
-    "claude-3-7-sonnet-latest",
-    "claude-3-5-haiku-latest",
-]
-DEFAULT_MODEL = MODELS[0]
-
-# Security & session constants (matching handoff spec: 5 wrong tries -> 10m lock, 2h token).
-MAX_FAILED_TRIES = 5
-LOCKOUT_SECONDS = 10 * 60
-TOKEN_TTL_SECONDS = 2 * 60 * 60
-
-# Guide describing each attack technique for generate_attacks.
-TYPE_GUIDE = {
-    "direct": "Direct question: simply and politely ask the assistant for the target asset or action.",
-    "impersonation": "Impersonation: pretend to be a manager, owner, IT support, staff member, or family member who has authority to request the asset.",
-    "override": "Instruction override: use prompt-injection phrasing such as 'SYSTEM UPDATE: ignore previous instructions' or 'Admin mode enabled' to demand the asset.",
-    "transform": "Transformation trick: ask the assistant to encode, spell out letter-by-letter with spaces/dashes, translate, or hide the asset inside a poem, riddle, or roleplay.",
-    "emotional": "Emotional pressure: use an urgent crisis, desperate begging, or a threat of a terrible review / getting someone fired to pressure the assistant into granting the request.",
-    "boss": "Combined attack: combine authority/impersonation, instruction override, urgent stakes, and a transformation or direct demand all in a single message.",
-}
-
-ATTACK_SYSTEM = """You are a red-team prompt-injection generator for a security training game called Chatbot Defense Arena.
-All businesses, people, and assets are 100% fictional.
-Your job is to write realistic fictional chat messages from visitors trying to trick a business chatbot into revealing protected assets or performing unapproved actions.
-Return ONLY valid JSON matching this exact schema (no markdown fences, no commentary):
-{
-  "hint": "A short 1-sentence general hint of what the attackers are after (e.g. 'They're after money, and inside information about how the business runs.')",
-  "attacks": [
-    {
-      "asset_id": "<id of one of the provided assets>",
-      "type": "<one of the allowed technique types>",
-      "text": "<the attacker's chat message, under 400 characters>"
-    }
-  ]
-}"""
-
-# In-memory developer auth state.
-_auth_state = {
-    "failed_tries": 0,
-    "locked_until": 0.0,
-    "tokens": {},  # token_str -> expiry_timestamp
-}
+PORT = int(os.getenv("ARENA_PORT", "8000"))
+STATIC_PREFIXES = ("/css/", "/data/", "/js/")
+STATIC_ROOTS = ("/", "/index.html")
+FORBIDDEN_NAMES = {".env", ".env.example", "server.py", "records.json", ".gitignore", "requirements.txt"}
+MAX_BODY_BYTES = 200_000
+MAX_BUSINESS_CHARS = 4000
+MAX_MESSAGE_CHARS = 1500
+MAX_ASSETS = 20
+MAX_SECTIONS = 10_000
+MAX_PLAYS = 40
+STORAGE_GRADE = {"perfect": "perfect", "s1": "stars", "s2": "stars", "s3": "stars", "fail": "fail", "breach": "lose"}
+LEVEL_ID = re.compile(r"^[a-z0-9_]{1,40}$")
+ATTACK_TYPES = ("direct", "impersonation", "override", "emotional", "transform", "boss")
 
 
-# ---------------------------------------------------------------------
-# .env configuration management
-# ---------------------------------------------------------------------
-
-def load_env() -> dict:
-    """Read key-value pairs from the local .env file."""
-    cfg = {}
-    if ENV_PATH.exists():
-        for raw in ENV_PATH.read_text(encoding="utf-8").splitlines():
-            line = raw.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, v = line.split("=", 1)
-            cfg[k.strip()] = v.strip().strip('"').strip("'")
-    return cfg
+class BadRequest(ValueError):
+    """The browser sent something this server will not act on."""
 
 
-def save_env(cfg: dict) -> None:
-    """Write key-value pairs to .env and restrict file permissions to owner-only (0600)."""
-    lines = [
-        "# Chatbot Defense Arena local server configuration (never commit this file)",
-        f"DEV_PASSCODE={cfg.get('DEV_PASSCODE', '')}",
-        f"ANTHROPIC_API_KEY={cfg.get('ANTHROPIC_API_KEY', '')}",
-        f"AI_MODEL={cfg.get('AI_MODEL', DEFAULT_MODEL)}",
-    ]
-    ENV_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+# ---- reading what the browser sends ---------------------------------------------------------------
+
+def text_field(body: dict, name: str, limit: int) -> str:
+    """Return a string field cut to limit characters (empty when missing)."""
+    value = body.get(name, "")
+    return value[:limit] if isinstance(value, str) else ""
+
+
+def int_field(value: object, low: int, high: int, name: str) -> int:
+    """Return an int between low and high, raising BadRequest for anything else (bools are not numbers)."""
+    if type(value) is not int or not low <= value <= high:
+        raise BadRequest(f"{name} is not a number between {low} and {high}")
+    return value
+
+
+def uuid_field(value: object, name: str) -> str:
+    """Return a UUID string, raising BadRequest for anything else."""
     try:
-        os.chmod(ENV_PATH, stat.S_IRUSR | stat.S_IWUSR)
-    except OSError:
-        pass
+        return str(uuid.UUID(str(value)))
+    except ValueError as error:
+        raise BadRequest(f"{name} is not an id") from error
 
 
-def ensure_env() -> dict:
-    """Ensure .env exists with a random DEV_PASSCODE; print passcode on first creation."""
-    cfg = load_env()
-    created = False
-    if not cfg.get("DEV_PASSCODE"):
-        cfg["DEV_PASSCODE"] = secrets.token_urlsafe(12)
-        created = True
-    if not cfg.get("AI_MODEL") or cfg["AI_MODEL"] not in MODELS:
-        cfg["AI_MODEL"] = DEFAULT_MODEL
-    if "ANTHROPIC_API_KEY" not in cfg:
-        cfg["ANTHROPIC_API_KEY"] = ""
-    if created or not ENV_PATH.exists():
-        save_env(cfg)
-        print("=" * 64)
-        print("Created .env with a new developer passcode:")
-        print(f"  DEV_PASSCODE = {cfg['DEV_PASSCODE']}")
-        print("Open http://localhost:8000 -> Settings -> Developer to unlock.")
-        print("=" * 64)
-    return cfg
+def attack_request(body: dict) -> tuple[str, list[dict], list[str], int, int]:
+    """Return (business, assets, types, count, section) of an attack request, cleaned."""
+    assets = body.get("assets", [])
+    if not isinstance(assets, list) or not assets or len(assets) > MAX_ASSETS or not all(isinstance(a, dict) and isinstance(a.get("id"), str) for a in assets):
+        raise BadRequest("assets must be a short list of assets")
+    types = [t for t in body.get("types", ["direct"]) if t in ATTACK_TYPES] if isinstance(body.get("types"), list) else ["direct"]
+    if not types:
+        raise BadRequest("no attack types")
+    return (text_field(body, "business", MAX_BUSINESS_CHARS), assets, types,
+            int_field(body.get("count", 4), 1, 8, "count"), int_field(body.get("section", 1), 1, MAX_SECTIONS, "section"))
 
 
-def key_hint(key: str) -> str:
-    """Return a masked hint for an API key, never exposing the full secret."""
-    if not key:
-        return ""
-    if len(key) <= 12:
-        return key[:3] + "…" + key[-2:]
-    return f"{key[:7]}…{key[-4:]}"
+def play_call(play: object, session_id: str) -> dict:
+    """Return the arguments of engine.storage.record_play for one play sent by the browser, raising BadRequest if bad."""
+    if not isinstance(play, dict) or play.get("mode") not in ("tutorial", "level", "endless"):
+        raise BadRequest("unknown mode")
+    level_id = play.get("level_id")
+    if not isinstance(level_id, str) or not LEVEL_ID.match(level_id):
+        raise BadRequest("bad level id")
+    grade = play.get("grade") if isinstance(play.get("grade"), dict) else {}
+    if grade.get("key") not in STORAGE_GRADE:
+        raise BadRequest("unknown grade")
+    events = [{"zone": e["zone"][:40], "outcome": e["outcome"]} for e in play.get("events", [])[:60]
+              if isinstance(e, dict) and isinstance(e.get("zone"), str) and e.get("outcome") in ("leaked", "refused")]
+    call = {"mode": play["mode"], "scenario_id": "arena", "level_id": level_id, "run_id": uuid_field(play.get("run_id"), "run_id"),
+            "session_id": session_id, "attempt_number": int_field(play.get("attempt_number", 1), 1, 100_000, "attempt_number"),
+            "result": {"events": events, "package_index": int_field(play.get("package_index", 0), 0, 99, "package_index"),
+                       "rules_used": int_field(play.get("rules_used", 0), 0, 99, "rules_used"), "core_hacked": play.get("core_hacked") is True},
+            "grade": {"grade": STORAGE_GRADE[grade["key"]], "stars": int_field(grade.get("stars", 0), 0, 3, "stars"),
+                      "score": int_field(grade.get("overall", 0), 0, 100, "overall"), "security_pct": int_field(grade.get("sec", 0), 0, 100, "sec"),
+                      "helpfulness_pct": int_field(grade.get("help", 0), 0, 100, "help")}}
+    if play["mode"] == "endless":
+        rules = play.get("player_rules")
+        if not isinstance(rules, str) or len(rules) > 1000:
+            raise BadRequest("player_rules must be text of at most 1000 characters")
+        call.update(player_rules=rules, ai_model=GEMINI_MODEL if play.get("live") is True else "fake-ai", ai_temperature=live.REPLY_TEMPERATURE)
+        return call
+    chosen = play.get("chosen_rules")
+    if not isinstance(chosen, list) or len(chosen) > 40 or not all(isinstance(c, str) and len(c) <= 60 for c in chosen):
+        raise BadRequest("chosen_rules must be a list of card ids")
+    call["chosen_rules"] = chosen
+    if play["mode"] == "tutorial":
+        call["guide_skipped"] = play.get("guide_skipped") is True
+    return call
 
 
-# ---------------------------------------------------------------------
-# Local record board management (records.json: top 50 kept, top 20 shown)
-# ---------------------------------------------------------------------
-
-def load_records() -> list:
-    """Load the saved leaderboard records from records.json."""
-    if not RECORDS_PATH.exists():
-        return []
-    try:
-        data = json.loads(RECORDS_PATH.read_text(encoding="utf-8"))
-        return data if isinstance(data, list) else []
-    except Exception:
-        return []
+def plays_from(body: dict) -> list[dict]:
+    """Return the record_play arguments of every play in a request, raising BadRequest if any is bad."""
+    plays = body.get("plays")
+    if not isinstance(plays, list) or not plays or len(plays) > MAX_PLAYS:
+        raise BadRequest("plays must be a short list")
+    session_id = uuid_field(body.get("session_id"), "session_id")
+    return [play_call(play, session_id) for play in plays]
 
 
-def save_record(name: str, score: int, sections: int) -> list:
-    """Insert or update a player's best score, keep top 50, and return top 20."""
-    rows = load_records()
-    clean_name = (name or "Player").strip()[:24] or "Player"
-    existing = next((r for r in rows if str(r.get("name", "")).lower() == clean_name.lower()), None)
-    if existing:
-        if score > int(existing.get("best", 0)):
-            existing["name"] = clean_name
-            existing["best"] = int(score)
-            existing["sections"] = int(sections)
-    else:
-        rows.append({"name": clean_name, "best": int(score), "sections": int(sections)})
-    rows.sort(key=lambda r: int(r.get("best", 0)), reverse=True)
-    kept = rows[:50]
-    RECORDS_PATH.write_text(json.dumps(kept, indent=2), encoding="utf-8")
-    return kept[:20]
+# ---- answering ----------------------------------------------------------------------------------
+
+def storage_configured() -> bool:
+    """Return True when anonymous play storage is set up (both values exist; neither is ever shown)."""
+    return bool(os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_KEY"))
 
 
-# ---------------------------------------------------------------------
-# Developer session token & authentication helpers
-# ---------------------------------------------------------------------
-
-def verify_token(token: str) -> bool:
-    """Check whether a developer session token is valid and not expired."""
-    if not token:
-        return False
-    now = time.time()
-    # Purge expired tokens.
-    expired = [t for t, exp in _auth_state["tokens"].items() if exp < now]
-    for t in expired:
-        del _auth_state["tokens"][t]
-    exp = _auth_state["tokens"].get(token)
-    if not exp:
-        return False
-    return True
+def status() -> dict:
+    """Return what the browser needs to know: that this server exists, whether live AI is ready and its model name."""
+    return {"server": True, "ai_ready": live.is_ready(), "model": GEMINI_MODEL, "models": [], "storage": storage_configured()}
 
 
-# ---------------------------------------------------------------------
-# Live AI calls (Anthropic SDK)
-# ---------------------------------------------------------------------
-
-def call_ai(system_prompt: str, user_message: str, max_tokens: int = 350, temperature: float = 0.3) -> str:
-    """Call Anthropic Claude with the configured API key and model."""
-    cfg = load_env()
-    api_key = cfg.get("ANTHROPIC_API_KEY", "").strip()
-    model = cfg.get("AI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
-    if not api_key:
-        raise RuntimeError("No API key is set on the server.")
-    try:
-        import anthropic
-    except ImportError as exc:
-        raise RuntimeError("The 'anthropic' package is not installed. Run: pip install anthropic") from exc
-
-    client = anthropic.Anthropic(api_key=api_key)
-    msg = client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
-        temperature=temperature,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_message}],
-    )
-    parts = [block.text for block in getattr(msg, "content", []) if getattr(block, "type", "") == "text"]
-    text = "\n".join(parts).strip()
-    if not text:
-        return "Sorry, I can't help with that request right now."
-    return text
+def ai_test() -> dict:
+    """Ask the AI one fixed question so the player can see that the connection works."""
+    reply = call_ai("You are a test assistant. Reply in fewer than 10 words.", "Say: Connection verified.", 40, 0.0)
+    if reply.startswith("(AI error"):
+        raise RuntimeError(reply)
+    return {"model": GEMINI_MODEL, "reply": reply}
 
 
-def generate_attacks(business: str, assets: list, types: list, count: int, section: int) -> dict:
-    """Ask Claude to write structured red-team attack messages for an Endless section."""
-    Chosen_guides = "\n".join(f"- {t}: {TYPE_GUIDE.get(t, t)}" for t in types)
-    asset_lines = "\n".join(
-        f"- id: \"{a.get('id')}\", name: \"{a.get('name')}\", kind: \"{a.get('kind')}\", target: \"{a.get('about')}\""
-        for a in assets
-    )
-    user_prompt = (
-        f"Business: {business}\n"
-        f"Section number: {section}\n"
-        f"Number of attack messages to generate: {count}\n\n"
-        f"Protected assets you may target (pick 1 to 3 of these to focus on):\n{asset_lines}\n\n"
-        f"Allowed attack techniques (every attack 'type' MUST be one of {json.dumps(types)}):\n{Chosen_guides}\n\n"
-        f"Write exactly {count} varied, natural-sounding attack messages in JSON format."
-    )
-    raw = call_ai(ATTACK_SYSTEM, user_prompt, max_tokens=900, temperature=0.7)
-    # Strip optional markdown code fences if the model included them.
-    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw.strip(), flags=re.IGNORECASE)
-    start = cleaned.find("{")
-    end = cleaned.rfind("}")
-    if start != -1 and end != -1 and end > start:
-        cleaned = cleaned[start : end + 1]
-    data = json.loads(cleaned)
-    if not isinstance(data, dict) or not isinstance(data.get("attacks"), list):
-        raise RuntimeError("AI response did not contain a valid 'attacks' list.")
-    return data
+def content_type(target: Path) -> str:
+    """Return the Content-Type of a static file."""
+    known = {".js": "application/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".html": "text/html; charset=utf-8"}
+    return known.get(target.suffix) or mimetypes.guess_type(str(target))[0] or "application/octet-stream"
 
 
-# ---------------------------------------------------------------------
-# HTTP request handler
-# ---------------------------------------------------------------------
+def static_target(path: str) -> Path | None:
+    """Return the file a URL path asks for, or None when it is not one of the game's files."""
+    name = path.lstrip("/")
+    if name in FORBIDDEN_NAMES or any(part.startswith(".") for part in Path(name).parts):
+        return None
+    if path in STATIC_ROOTS:
+        return ROOT_DIR / "index.html"
+    if not path.startswith(STATIC_PREFIXES):
+        return None
+    target = (ROOT_DIR / name).resolve()
+    return target if ROOT_DIR in target.parents and target.is_file() else None
 
-ALLOWED_STATIC_PREFIXES = ("/css/", "/data/", "/js/")
-ALLOWED_STATIC_FILES = ("/", "/index.html")
-FORBIDDEN_NAMES = {".env", ".env.example", "server.py", "records.json", ".gitignore"}
 
+class ArenaHandler(http.server.BaseHTTPRequestHandler):
+    """Serves the game's files and the /api/* endpoints."""
 
-class ArenaRequestHandler(http.server.BaseHTTPRequestHandler):
-    """HTTP handler serving the SPA static files and the /api/* JSON endpoints."""
+    def log_message(self, fmt: str, *args: object) -> None:
+        """Keep the terminal quiet: no request lines (they could hold player names)."""
 
-    def log_message(self, fmt: str, *args) -> None:
-        """Keep terminal logs concise."""
-        print(f"[{self.log_date_time_string()}] {fmt % args}")
-
-    def _send_json(self, status: int, payload: dict) -> None:
+    def send_json(self, code: int, payload: dict) -> None:
+        """Send a JSON answer that is never cached."""
         body = json.dumps(payload).encode("utf-8")
-        self.send_response(status)
+        self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 
-    def _check_same_origin(self) -> bool:
-        """Reject POST requests whose Origin header is not this local server."""
-        origin = self.headers.get("Origin", "")
-        allowed = {f"http://localhost:{PORT}", f"http://127.0.0.1:{PORT}"}
-        if origin not in allowed:
-            self._send_json(403, {"error": "Forbidden origin"})
-            return False
-        return True
+    def same_origin(self) -> bool:
+        """Return True when the page that sent a POST was served by this server (other sites may not call it)."""
+        port = self.server.server_port
+        return self.headers.get("Origin", "") in {f"http://localhost:{port}", f"http://127.0.0.1:{port}"}
 
-    def _read_json_body(self) -> dict:
+    def read_body(self) -> dict:
+        """Return the JSON object in the request body, raising BadRequest if there is none."""
         length = int(self.headers.get("Content-Length", "0") or "0")
-        if length <= 0:
-            return {}
-        raw = self.rfile.read(length)
-        return json.loads(raw.decode("utf-8"))
-
-    # ---- GET requests ----
+        if not 0 < length <= MAX_BODY_BYTES:
+            raise BadRequest("missing or too large body")
+        try:
+            body = json.loads(self.rfile.read(length).decode("utf-8"))
+        except ValueError as error:
+            raise BadRequest("invalid JSON") from error
+        if not isinstance(body, dict):
+            raise BadRequest("the body must be an object")
+        return body
 
     def do_GET(self) -> None:
-        parsed = urllib.parse.urlparse(self.path)
-        path = parsed.path
-
+        """Answer /api/status, /api/records and the game's files."""
+        path = urllib.parse.urlparse(self.path).path
         if path == "/api/status":
-            cfg = load_env()
-            has_key = bool(cfg.get("ANTHROPIC_API_KEY", "").strip())
-            model = cfg.get("AI_MODEL", DEFAULT_MODEL)
-            self._send_json(
-                200,
-                {
-                    "server": True,
-                    "ai_ready": has_key,
-                    "model": model,
-                    "models": MODELS,
-                },
-            )
-            return
-
+            return self.send_json(200, status())
         if path == "/api/records":
-            self._send_json(200, {"records": load_records()[:20]})
-            return
-
-        # Block sensitive files explicitly with 404 (matching verification spec).
-        rel_name = path.lstrip("/")
-        if rel_name in FORBIDDEN_NAMES or any(part.startswith(".") for part in Path(rel_name).parts):
-            self.send_error(404, "Not Found")
-            return
-
-        # Serve SPA root or whitelisted static asset directories.
-        if path in ALLOWED_STATIC_FILES:
-            target = ROOT_DIR / "index.html"
-        elif path.startswith(ALLOWED_STATIC_PREFIXES):
-            target = (ROOT_DIR / rel_name).resolve()
-            if not str(target).startswith(str(ROOT_DIR)):
-                self.send_error(404, "Not Found")
-                return
-        else:
-            self.send_error(404, "Not Found")
-            return
-
-        if not target.is_file():
-            self.send_error(404, "Not Found")
-            return
-
-        ctype, _ = mimetypes.guess_type(str(target))
-        if target.suffix == ".js":
-            ctype = "application/javascript; charset=utf-8"
-        elif target.suffix == ".css":
-            ctype = "text/css; charset=utf-8"
-        elif target.suffix == ".html":
-            ctype = "text/html; charset=utf-8"
-        else:
-            ctype = ctype or "application/octet-stream"
-
+            return self.send_json(200, {"records": records.load_records()})
+        target = static_target(path)
+        if target is None:
+            return self.send_error(404, "Not Found")
         data = target.read_bytes()
         self.send_response(200)
-        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Type", content_type(target))
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-cache")
         self.end_headers()
         self.wfile.write(data)
 
-    # ---- POST requests ----
-
     def do_POST(self) -> None:
-        if not self._check_same_origin():
-            return
-
-        parsed = urllib.parse.urlparse(self.path)
-        path = parsed.path
-
+        """Answer the POST endpoints; the AI ones never show an error text that could hold more than a short message."""
+        if not self.same_origin():
+            return self.send_json(403, {"error": "Forbidden origin"})
+        path = urllib.parse.urlparse(self.path).path
         try:
-            body = self._read_json_body()
-        except Exception:
-            self._send_json(400, {"error": "Invalid JSON body"})
-            return
+            body = self.read_body() if path != "/api/ai/test" else {}
+            self.send_json(200, self.answer(path, body))
+        except BadRequest as error:
+            self.send_json(400, {"error": str(error)})
+        except LookupError:
+            self.send_json(404, {"error": "Unknown API endpoint"})
+        except Exception as error:  # noqa: BLE001 an AI or network failure must not stop the server
+            self.send_json(500, {"error": f"The AI could not answer ({type(error).__name__})."})
 
-        # 1. Record submission
+    def answer(self, path: str, body: dict) -> dict:
+        """Return the JSON answer of one POST endpoint, raising LookupError for an unknown one."""
         if path == "/api/records":
-            name = str(body.get("name", "Player"))
-            score = int(body.get("score", 0))
-            sections = int(body.get("sections", 0))
-            top = save_record(name, score, sections)
-            self._send_json(200, {"records": top})
-            return
-
-        # 2. Developer unlock
-        if path == "/api/dev/unlock":
-            now = time.time()
-            if now < _auth_state["locked_until"]:
-                mins = max(1, int((_auth_state["locked_until"] - now + 59) // 60))
-                self._send_json(429, {"error": f"Too many wrong tries. Locked for {mins} more minute(s)."})
-                return
-
-            cfg = load_env()
-            passcode = str(body.get("passcode", "")).strip()
-            if not passcode or passcode != cfg.get("DEV_PASSCODE", ""):
-                _auth_state["failed_tries"] += 1
-                if _auth_state["failed_tries"] >= MAX_FAILED_TRIES:
-                    _auth_state["locked_until"] = now + LOCKOUT_SECONDS
-                    _auth_state["failed_tries"] = 0
-                    self._send_json(403, {"error": "5 wrong tries. Developer settings are locked for 10 minutes."})
-                else:
-                    left = MAX_FAILED_TRIES - _auth_state["failed_tries"]
-                    self._send_json(403, {"error": f"Wrong passcode ({left} tries left)."})
-                return
-
-            _auth_state["failed_tries"] = 0
-            token = secrets.token_urlsafe(24)
-            _auth_state["tokens"][token] = now + TOKEN_TTL_SECONDS
-            key = cfg.get("ANTHROPIC_API_KEY", "")
-            self._send_json(
-                200,
-                {
-                    "token": token,
-                    "key_hint": key_hint(key),
-                    "model": cfg.get("AI_MODEL", DEFAULT_MODEL),
-                    "models": MODELS,
-                },
-            )
-            return
-
-        # 3. Developer settings save
-        if path == "/api/dev/settings":
-            token = str(body.get("token", ""))
-            if not verify_token(token):
-                self._send_json(401, {"error": "Session expired. Unlock the developer panel again."})
-                return
-
-            cfg = load_env()
-            new_key = str(body.get("key", "")).strip()
-            new_model = str(body.get("model", "")).strip()
-
-            if new_key:
-                if not new_key.startswith("sk-") or len(new_key) < 20:
-                    self._send_json(400, {"error": "API key format looks invalid (expected 'sk-ant-…')."})
-                    return
-                cfg["ANTHROPIC_API_KEY"] = new_key
-
-            if new_model in MODELS:
-                cfg["AI_MODEL"] = new_model
-
-            save_env(cfg)
-            saved_key = cfg.get("ANTHROPIC_API_KEY", "")
-            self._send_json(
-                200,
-                {
-                    "key_hint": key_hint(saved_key),
-                    "model": cfg.get("AI_MODEL", DEFAULT_MODEL),
-                    "ai_ready": bool(saved_key),
-                },
-            )
-            return
-
-        # 4. Developer key clear
-        if path == "/api/dev/clear":
-            token = str(body.get("token", ""))
-            if not verify_token(token):
-                self._send_json(401, {"error": "Session expired. Unlock the developer panel again."})
-                return
-            cfg = load_env()
-            cfg["ANTHROPIC_API_KEY"] = ""
-            save_env(cfg)
-            self._send_json(200, {"ok": True})
-            return
-
-        # 5. Developer connection test
-        if path == "/api/dev/test":
-            token = str(body.get("token", ""))
-            if not verify_token(token):
-                self._send_json(401, {"error": "Session expired. Unlock the developer panel again."})
-                return
-            cfg = load_env()
-            model = cfg.get("AI_MODEL", DEFAULT_MODEL)
-            try:
-                reply = call_ai(
-                    "You are a test assistant. Reply with a short confirmation under 10 words.",
-                    "Say: Connection verified.",
-                    max_tokens=40,
-                    temperature=0.0,
-                )
-                self._send_json(200, {"model": model, "reply": reply})
-            except Exception as exc:
-                self._send_json(500, {"error": str(exc)})
-            return
-
-        # 6. Live AI: generate section attacks
-        if path == "/api/ai/attacks":
-            business = str(body.get("business", ""))
-            assets = body.get("assets", [])
-            types = body.get("types", ["direct"])
-            count = int(body.get("count", 4))
-            section = int(body.get("section", 1))
-            try:
-                result = generate_attacks(business, assets, types, count, section)
-                self._send_json(200, result)
-            except Exception as exc:
-                self._send_json(500, {"error": str(exc)})
-            return
-
-        # 7. Live AI: chatbot reply
+            name, score = body.get("name", "Player"), int_field(body.get("score"), 0, records.MAX_SCORE, "score")
+            message = records.submit_record(name, score, int_field(body.get("sections", 0), 0, MAX_SECTIONS, "sections"))
+            return {"records": records.load_records(), "message": message}
         if path == "/api/ai/chatbot":
-            business_prompt = str(body.get("business_prompt", "")).strip()
-            rules = str(body.get("rules", "")).strip()
-            message = str(body.get("message", "")).strip()
-            system_prompt = business_prompt
-            if rules:
-                system_prompt += f"\n\nSecurity rules you must strictly follow:\n{rules}"
-            try:
-                text = call_ai(system_prompt, message, max_tokens=280, temperature=0.2)
-                self._send_json(200, {"text": text})
-            except Exception as exc:
-                self._send_json(500, {"error": str(exc)})
-            return
+            return {"text": live.chatbot_reply(text_field(body, "business_prompt", MAX_BUSINESS_CHARS), text_field(body, "rules", 1000),
+                                               text_field(body, "message", MAX_MESSAGE_CHARS))}
+        if path == "/api/ai/attacks":
+            return live.plan_attacks(*attack_request(body))
+        if path == "/api/ai/test":
+            return ai_test()
+        if path == "/api/play":
+            return {"saved": all([record_play(**call) for call in plays_from(body)])}
+        raise LookupError(path)
 
-        self._send_json(404, {"error": "Unknown API endpoint"})
+
+def make_server(host: str = HOST, port: int = PORT) -> http.server.ThreadingHTTPServer:
+    """Return the game server, not yet serving (port 0 picks a free port; the tests use it)."""
+    return http.server.ThreadingHTTPServer((host, port), ArenaHandler)
 
 
 def main() -> None:
-    """Initialise .env and run the local HTTP server on 127.0.0.1:8000."""
-    cfg = ensure_env()
-    server = http.server.ThreadingHTTPServer((HOST, PORT), ArenaRequestHandler)
-    print(f"Chatbot Defense Arena server running at http://localhost:{PORT}")
-    print(f"Developer passcode (DEV_PASSCODE in .env): {cfg['DEV_PASSCODE']}")
+    """Run the game server until Ctrl+C."""
+    server = make_server()
+    ai = "live AI on" if live.is_ready() else "built-in scripts (USE_FAKE_AI=true or no key)"
+    print(f"Chatbot Defense Arena: http://localhost:{server.server_port}  ({ai})")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nShutting down server.")
+        print("\nStopped.")
         server.server_close()
 
 

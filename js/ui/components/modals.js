@@ -15,7 +15,10 @@ import { missingFor } from "../../engine/generator.js";
 import { efficiencyLabel } from "../../engine/evaluator.js";
 import { mapSvg, tallyHtml } from "./core-map.js";
 import { entryHtml } from "./chat-box.js";
+import { consentHtml, registerConsent } from "../../services/share.js";
 
+// The consent box of a level report sends this round once, and only if the player ticks it.
+registerConsent("level", () => S.last && ({ sent: !!S.last.sent, plays: [S.last.share], markSent: () => { S.last.sent = true; } }));
 // Stop the replay timer if one is running.
 export function stopReplay() { if (state.replayTimer) { clearInterval(state.replayTimer); state.replayTimer = null; } }
 // Draw state.modal into #modal-root (or clear it), run its after() hook and focus the first control.
@@ -66,6 +69,7 @@ export function showReport(L) {
       <div class="stat"><div class="v">${r.grade.overall}%</div><div class="l">Overall · ${r.points} points</div></div>
     </div>
     ${reportNotes(r)}
+    ${consentHtml("level", r.sent)}
     <div class="row">
       <button class="btn primary" data-action="openReplay" data-autofocus>Watch replay</button>
       <button class="btn" data-action="retryLevel">Try again</button>

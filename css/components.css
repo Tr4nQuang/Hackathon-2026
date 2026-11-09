@@ -177,3 +177,8 @@ label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:70
 .err{color:var(--bad);font-size:14px}
 .okmsg{color:var(--good);font-size:14px}
 
+
+/* Consent box on reports */
+.consent{display:flex;flex-direction:column;gap:4px}
+.consent label{display:flex;gap:8px;align-items:flex-start;font-size:14px;cursor:pointer}
+.consent input{margin-top:3px;accent-color:var(--accent)}

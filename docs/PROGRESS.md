@@ -104,3 +104,13 @@ Branch james/arena-parity. The goal was to make the Streamlit game the same game
 - The chat is a phone-style window: logo, name and status in the header, a fixed height with its own scrollbar, the sender above each bubble.
 - When the chat reaches its last message the report opens by itself after 1.2 seconds (the round, and an Endless section). It happens once per round, so Close does not bounce back. The Report button stays as a fallback.
 - Icons are inline SVG drawn in ui/icons.py (shield, cup, car, cap, bolt), not emoji, so they line up in the top bar, business banners, chat header and rule costs. The chat is a phone frame: bezel, speaker slot, status bar, home bar and a fixed 44rem height whose body scrolls.
+
+## Browser game as the main interface (branch james/aalebell-fork)
+This branch is the browser demo fork (AAlebell/Hackathon-James-trian-fork-2026, the original demo split into ES modules) with all of `main` merged in. The browser game is now the main interface and the Streamlit game is kept.
+
+- Front end: `index.html`, `css/`, `js/`, `data/` are the fork's, with only these changes: the developer panel for typing an API key is replaced by an AI connection panel (status, test button, no key field), and reports have a consent box (js/services/share.js).
+- Back end: `server.py` is rewritten on the Python engine. AI replies and attacks go through `call_ai()` (Gemini, key in `.env` only), records through `engine/records.py` (one file, `local_data/records.json`, shared with the Streamlit game), anonymous plays through `engine/storage.py`. The fork's Anthropic client, passcode, `/api/dev/*` endpoints and key saving are gone (hard rule: no key typed into the game).
+- `engine/records.py` is new (the logic that was in `ui/store.py`, which is now a thin adapter). `engine/arena/live.py` gained helpers for the browser game (`chatbot_reply`, `plan_attacks`, `is_ready`).
+- `.gitignore` tracks the fork's `data/` folder and ignores `local_data/` (the record board).
+- Tests: `tests/test_server.py` (static files, same-origin POSTs, validation, records, AI helpers, no key endpoints) and `tests/test_front_parity.py` (Node loads `data/` and compares worlds, cards and levels with `scenarios/arena/`; all JavaScript parses and its imports exist). The browser flow was also walked through in a real browser: tutorial, consent box, Endless, record board, settings.
+- Not done: the browser game has no tutorial skip button (so `guide_skipped` is always false), and the Streamlit-only extras (the 10-step highlight guide, Continue / Start over on Home) are not in the browser game.

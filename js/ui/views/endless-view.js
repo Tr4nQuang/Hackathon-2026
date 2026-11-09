@@ -19,6 +19,10 @@ import { Records, boardHtml } from "../../services/records.js";
 import { mapPanel, EMPTY_SCORE } from "../components/core-map.js";
 import { chatShell, entryHtml, playRound } from "../components/chat-box.js";
 import { openModal, closeModal, gradeBadge, reportNotes } from "../components/modals.js";
+import { consentHtml, registerConsent, sectionPlay } from "../../services/share.js";
+
+// The consent box on the run-over screen sends every section of the run once, and only if the player ticks it.
+registerConsent("run", () => state.E && ({ sent: !!state.E.sent, plays: state.E.history.map(h => h.share), markSent: () => { state.E.sent = true; } }));
 
 // Base points for a section by grade key.
 export const STAR_BASE = { perfect: 800, s3: 500, s2: 250, s1: 100 };
@@ -125,7 +129,7 @@ export function endlessLobby() {
         <li><span class="chip accent">3</span><span>Pass a section with at least 1 star. Fail once, or let the core be breached, and the run ends.</span></li>
         <li><span class="chip accent">4</span><span>More stars earn more points, and every section is worth more than the last.</span></li>
       </ul>
-      <p class="notice">${AI.ready ? `Live AI is on: the attacker and the chatbot are ${esc(AI.model)}, running through the local game server.` : AI.server ? "The local server is running but has no API key. A developer can add one in Settings. Until then, built-in scripts are used." : "No live AI in this view, so attacks come from built-in scripts and replies are simulated from your rules. Run the local game server for live AI."}</p>
+      <p class="notice">${AI.ready ? `Live AI is on: the attacker and the chatbot are ${esc(AI.model)}, running through the local game server.` : AI.server ? "The local server is running but live AI is off or has no key (see Settings). Until then, built-in scripts are used." : "No live AI in this view, so attacks come from built-in scripts and replies are simulated from your rules. Run the local game server for live AI."}</p>
       <div class="row"><button class="btn primary" data-action="startEndless">Start a run</button><button class="btn" data-action="nav" data-to="records">Record board</button></div>
     </section>
     <section class="panel"><h3>Section points</h3><p class="muted" style="font-size:14px">Perfect 800 · 3 stars 500 · 2 stars 250 · 1 star 100. Each section adds 15% to that, and short rules earn a bonus (100 minus your word count).</p>
@@ -140,6 +144,7 @@ export function endlessOver() {
     <section class="panel">
       <h3>Your run</h3>
       ${state.E.history.length ? `<div style="overflow-x:auto"><table class="board"><thead><tr><th>Section</th><th>Business</th><th>Grade</th><th>Points</th></tr></thead><tbody>${state.E.history.map(h => `<tr><td>${h.n}</td><td>${esc(h.world)}</td><td>${esc(h.grade)}</td><td>${h.points}</td></tr>`).join("")}</tbody></table></div>` : `<p class="muted">No sections played.</p>`}
+      ${state.E.history.length ? consentHtml("run", state.E.sent) : ""}
       ${!state.E.saved && Records.mode !== "shared" ? `<label class="f" for="rec-name">Name for the record board<input type="text" id="rec-name" maxlength="24" value="${esc(name)}" placeholder="Player"></label>` : ""}
       ${state.E.saved ? `<p class="okmsg">${esc(state.E.saved)}</p>` : `<div class="row"><button class="btn primary" data-action="saveRecord">Save to record board</button></div>`}
       <div class="row"><button class="btn" data-action="startEndless">Play again</button>${state.E.last ? `<button class="btn" data-action="endlessReplay">Watch last replay</button>` : ""}</div>
@@ -165,7 +170,7 @@ export async function runSection() {
   const bonus = grade.pass ? Math.max(0, 100 - words) : 0;
   const points = grade.pass ? Math.round(STAR_BASE[grade.key] * (1 + 0.15 * (state.E.section - 1))) + bonus : 0;
   state.E.last = { ...res, world: w, sec, help, grade, points, bonus, words, offline: res.tally.offline, cov: c.live ? null : an.cov };
-  state.E.history.push({ n: state.E.section, world: w.short, grade: grade.label, points });
+  state.E.history.push({ n: state.E.section, world: w.short, grade: grade.label, points, share: sectionPlay(state.E.section, w, state.E.rules, c.live, state.E.last) });
   if (grade.pass) { state.E.score += points; state.E.passed++; }
   state.E.status = "report";
   render();

@@ -6,7 +6,7 @@
    importing this file.
    ===================================================================== */
 
-import { S, AI, state, registerRender, registerGo } from "./state.js";
+import { S, state, registerRender, registerGo } from "./state.js";
 import { $ } from "./ui/dom.js";
 import { store, saveProgress } from "./services/storage.js";
 import { api, detectServer } from "./services/api.js";
@@ -18,6 +18,7 @@ import { currentLevel, beginTry, viewPlay, initPlayChat, runLevel } from "./ui/v
 import { viewEndless, initEndlessChat, prepareSection, startEndless, runSection, showSectionReport, finishRun } from "./ui/views/endless-view.js";
 import { viewRecords } from "./ui/views/records-view.js";
 import { viewSettings, devCall } from "./ui/views/settings-view.js";
+import { shareFromCheckbox } from "./services/share.js";
 
 // Navigate to a screen: cancel any running round (new playToken), clear the modal and replay, merge extra values
 // into S, re-render and scroll to the top.
@@ -90,23 +91,8 @@ document.addEventListener("click", e => {
     case "askReset": S.confirmReset = true; render(); break;
     case "cancelReset": S.confirmReset = false; render(); break;
     case "resetProgress": state.progress = {}; saveProgress(); S.confirmReset = false; render(); break;
-    case "devTest": devCall(async () => { const j = await api("/api/dev/test", { token: AI.token }); state.dev.msg = `Connected. ${j.model} replied: "${j.reply}"`; }); break;
-    case "devClear": devCall(async () => { await api("/api/dev/clear", { token: AI.token }); AI.keyHint = ""; AI.ready = false; state.dev.msg = "Key removed from the server."; }); break;
-    case "devLock": AI.token = null; state.dev = { msg: "", err: "", busy: false }; render(); break;
-  }
-});
-// Submit handler for the developer forms (unlock and save settings).
-document.addEventListener("submit", e => {
-  const f = e.target.closest("[data-form]"); if (!f) return;
-  e.preventDefault();
-  if (f.dataset.form === "unlock") {
-    const pass = $("#dev-pass").value;
-    devCall(async () => { const j = await api("/api/dev/unlock", { passcode: pass }); AI.token = j.token; AI.keyHint = j.key_hint; AI.model = j.model; AI.models = j.models; });
-  }
-  if (f.dataset.form === "devsave") {
-    const keyEl = $("#dev-key"), key = keyEl.value.trim(), model = $("#dev-model").value;
-    keyEl.value = "";
-    devCall(async () => { const j = await api("/api/dev/settings", { token: AI.token, key, model }); AI.keyHint = j.key_hint; AI.model = j.model; AI.ready = j.ai_ready; state.dev.msg = key ? "Key saved on the server." : "Settings saved."; });
+    case "aiTest": devCall(async () => { const j = await api("/api/ai/test", {}); state.dev.msg = `Connected. ${j.model} replied: "${j.reply}"`; }); break;
+    case "consent": shareFromCheckbox(el); break;
   }
 });
 // Keep the Endless rules text and its word counter in sync while typing.

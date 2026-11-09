@@ -16,6 +16,7 @@ import { mapPanel, EMPTY_SCORE } from "../components/core-map.js";
 import { chatShell, entryHtml, playRound } from "../components/chat-box.js";
 import { showReport } from "../components/modals.js";
 import { saveProgress } from "../../services/storage.js";
+import { levelPlay } from "../../services/share.js";
 
 // The level being played: the tutorial or LEVELS[S.levelIdx].
 export const currentLevel = () => S.mode === "tutorial" ? TUTORIAL : LEVELS[S.levelIdx];
@@ -104,6 +105,7 @@ export async function runLevel() {
   const points = grade.pass ? Math.max(0, sc.kept + sc.served - grade.penalty) : 0;
   S.running = false;
   S.last = { ...res, msgs, sel, cov, used, excess, sec, help, grade, points, pkg: S.pkg, world: w };
+  S.last.share = levelPlay(L, S.levelIdx, S.last);
   if (L.tutorial) { S.tutStep = 4; if (grade.pass) { state.progress.tutorial = true; saveProgress(); } }
   else {
     const p = state.progress[S.levelIdx] || { stars: 0, best: 0, perfect: false };

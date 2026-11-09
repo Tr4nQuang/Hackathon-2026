@@ -13,8 +13,9 @@
 // selected card ids, running flag, last result, tutorial step, last package per level, reset confirmation.
 // Only mutated (Object.assign / property writes), never reassigned.
 export const S = { screen: "home", mode: null, levelIdx: 0, pkg: 0, msgs: null, shop: [], selected: [], running: false, last: null, tutStep: 0, lastPkg: {}, confirmReset: false };
-// Live AI / local game server status: availability, model list, access token and key hint.
-export const AI = { server: false, ready: false, model: "", models: [], token: null, keyHint: "" };
+// Live AI / local game server status: whether the server answers, whether live AI is ready, its model name and
+// whether anonymous play storage is set up. The API key never reaches the browser.
+export const AI = { server: false, ready: false, model: "", storage: false };
 // Shared variables that used to be top-level `let`s. Write them as state.<name> = value.
 export const state = {
   // E: the current Endless run (null when none). Its status is lobby, brief, loading, report or over.
@@ -31,7 +32,7 @@ export const state = {
   playToken: 0,
   // progress: saved campaign results per level (filled from localStorage by services/storage.js).
   progress: {},
-  // dev: message / error / busy flags of the developer panel in Settings.
+  // dev: message / error / busy flags of the AI connection panel in Settings.
   dev: { msg: "", err: "", busy: false },
   // renderFn: the real render function, registered by main.js through registerRender().
   // goFn: the real navigation function, registered by main.js through registerGo().
