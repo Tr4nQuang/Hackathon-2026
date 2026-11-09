@@ -38,8 +38,9 @@ def speed_panel() -> None:
     with st.container(key="panel_speed"):
         st.subheader("Chat speed")
         st.caption("How fast attacks and replies appear during a round.")
-        st.radio("Chat speed", SPEEDS, index=SPEEDS.index(st.session_state["speed"]), format_func=str.capitalize, horizontal=True,
-                 key="speed_pick", on_change=set_speed, label_visibility="collapsed")
+        with st.container(key="speed_seg"):  # styled as a pill shaped segmented control in ui/theme.py
+            st.radio("Chat speed", SPEEDS, index=SPEEDS.index(st.session_state["speed"]), format_func=str.capitalize,
+                     horizontal=True, key="speed_pick", on_change=set_speed, label_visibility="collapsed")
 
 
 def progress_panel() -> None:

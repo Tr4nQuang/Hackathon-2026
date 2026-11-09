@@ -19,6 +19,8 @@ SCREEN_SECTIONS = {
 }
 HIGHLIGHT_COLOR = "#f59e0b"
 DIMMED_OPACITY = 0.35
+HIGHLIGHT_PAD_Y = ".75rem"
+HIGHLIGHT_PAD_X = "1rem"
 
 
 def restart() -> None:
@@ -67,9 +69,11 @@ def sync(screen: str, source: dict) -> None:
 def highlight_css(screen: str, target: str) -> str:
     """Return CSS that outlines the target section and dims the other sections of the screen."""
     dimmed = ", ".join(f".st-key-sec_{name}" for name in SCREEN_SECTIONS[screen] if name != target)
+    # Padding gives the outline room; the equal negative margin and wider width keep the layout from moving.
     return (f"<style>{dimmed} {{opacity: {DIMMED_OPACITY};}} "
-            f".st-key-sec_{target} {{outline: 4px solid {HIGHLIGHT_COLOR}; outline-offset: 4px; "
-            f"border-radius: 8px;}}</style>")
+            f".st-key-sec_{target} {{outline: 4px solid {HIGHLIGHT_COLOR}; outline-offset: 0; border-radius: 14px; "
+            f"padding: {HIGHLIGHT_PAD_Y} {HIGHLIGHT_PAD_X}; margin: -{HIGHLIGHT_PAD_Y} -{HIGHLIGHT_PAD_X}; "
+            f"width: calc(100% + 2 * {HIGHLIGHT_PAD_X}) !important; max-width: none; box-sizing: border-box;}}</style>")
 
 
 def show(screen: str, source: dict) -> None:
@@ -83,8 +87,8 @@ def show(screen: str, source: dict) -> None:
     st.html(highlight_css(screen, step["target"]))
     with st.container(key="guide_box"):
         avatar, body = st.columns([1, 14], vertical_alignment="top")
-        with avatar, st.container(key="coach_avatar"):
-            st.markdown("C")
+        with avatar:
+            st.html('<span class="cda-coach" aria-hidden="true">C</span>')  # static, so no Streamlit wrappers to centre
         with body:
             st.markdown(f"**Tutorial, step {index + 1} of {len(steps)}: {step['title']}**")
             st.write(step["text"])

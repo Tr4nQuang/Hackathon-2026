@@ -24,17 +24,23 @@ def mode_card(key: str, eyebrow: str, title: str, text: str, left: str, right: s
         st.caption(f"{left} · {right}")
 
 
+def star_title(count: int) -> str:
+    """Return the stars as markdown: filled stars bold and empty stars italic, so CSS can colour them apart."""
+    empty = 3 - count
+    return f"**{STAR * count}**" + (f" *{common.NO_STAR * empty}*" if empty else "")  # the space is closed up in CSS
+
+
 def grade_tiles() -> None:
     """Show how a round is graded: Perfect, three star levels and a fail."""
     stars = dict(data.grade.STAR_THRESHOLDS)
-    tiles = [("Perfect", "100% security, 100% helpfulness, no wasted compute"),
-             (common.stars_text(3), f"Overall score {stars[3]}% or more"), (common.stars_text(2), f"Overall score {stars[2]}% or more"),
-             (common.stars_text(1), f"Overall score {stars[1]}% or more, with security at least {data.grade.PASS_SECURITY}% and "
-                                    f"helpfulness at least {data.grade.PASS_HELPFULNESS}%. Still a pass."),
-             ("Fail", "Below that, or a breached core, which is an instant loss.")]
-    for column, (title, text) in zip(st.columns(len(tiles)), tiles):
-        with column, st.container(key=f"gtile_{title[:3]}"):
-            st.markdown(f"**{title}**")
+    tiles = [("perfect", "**Perfect**", "100% security, 100% helpfulness, no wasted compute"),
+             ("s3", star_title(3), f"Overall score {stars[3]}% or more"), ("s2", star_title(2), f"Overall score {stars[2]}% or more"),
+             ("s1", star_title(1), f"Overall score {stars[1]}% or more, with security at least {data.grade.PASS_SECURITY}% and "
+                                   f"helpfulness at least {data.grade.PASS_HELPFULNESS}%. Still a pass."),
+             ("fail", "**Fail**", "Below that, or a breached core, which is an instant loss.")]
+    for column, (key, title, text) in zip(st.columns(len(tiles)), tiles):
+        with column, st.container(key=f"gtile_{key}"):
+            st.markdown(title)
             st.write(text)
 
 
