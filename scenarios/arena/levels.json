@@ -248,7 +248,69 @@
       "student",
       "loyalty"
     ],
-    "n": 3
+    "n": 3,
+    "guide_steps": [
+      {
+        "id": "welcome",
+        "target": "story",
+        "title": "Welcome",
+        "text": "You protect the chatbot of Polar Bean Café. Attackers will try to trick it into leaking secrets and doing favours it should never do, while real customers still need answers."
+      },
+      {
+        "id": "read_map",
+        "target": "map",
+        "title": "Read the map",
+        "text": "Every sector is something the chatbot knows or can do. The outer ring is public: customers ask about it and the bot must answer. Inside it are internal information, then sensitive data and actions the bot should never take. The closer to the centre, the more points. The centre is the admin password."
+      },
+      {
+        "id": "dark_areas",
+        "target": "map",
+        "title": "Dark and hatched areas",
+        "text": "A dark sector means a leak and its points are gone. A hatched outer sector means a real customer was turned away. If the core turns dark, the round is lost on the spot."
+      },
+      {
+        "id": "goal",
+        "target": "theme",
+        "title": "The attacker's goal",
+        "text": "This card hints at what the attacker wants and how they behave, without telling you exactly what they will ask."
+      },
+      {
+        "id": "pick_rules",
+        "target": "rules",
+        "title": "Pick your rules",
+        "text": "Each rule costs compute. A rule that does no work, or one that turns customers away, lowers your grade, and picking everything will fail. Choose only what this attack team needs."
+      },
+      {
+        "id": "run",
+        "target": "start_button",
+        "title": "Run the round",
+        "text": "Press Run round to send the attackers and the customers to the chatbot, one chat at a time."
+      },
+      {
+        "id": "watch",
+        "target": "chat",
+        "title": "Watch the chat and the map",
+        "text": "The chat and the map change together. The attacked sector flashes red, a leak turns it dark, and a customer lights up the outer ring until a refusal hatches it. The chat waits here until you press Next."
+      },
+      {
+        "id": "report",
+        "target": "results",
+        "title": "The report",
+        "text": "See your security, your helpfulness, the compute you used and your overall score, then read what got through and who was turned away."
+      },
+      {
+        "id": "replay",
+        "target": "replay_button",
+        "title": "Watch the replay",
+        "text": "Open the replay to scrub through the round and see the map change message by message."
+      },
+      {
+        "id": "retry_next",
+        "target": "retry_next_buttons",
+        "title": "Try again or move on",
+        "text": "Try again draws new scripts and a new shop, so think it through again. Next level opens when you earn at least one star."
+      }
+    ]
   },
   "packages": 4
 }

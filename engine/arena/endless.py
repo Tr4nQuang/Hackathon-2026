@@ -74,8 +74,8 @@ def section_points(grade: dict, section: int, words: int) -> tuple[int, int]:
 def play_section(section: dict, rules: str, ask_ai=None) -> dict:
     """Play a section with the player's rules. Without ask_ai a simulated chatbot reads the rules, with it a real AI answers."""
     world = get_world(section["world_id"])
+    reading = analyze_rules(rules, world) if ask_ai is None else None
     if ask_ai is None:
-        reading = analyze_rules(rules, world)
         get_reply = lambda message: simulate_reply(world, message, reading["cov"], reading["bans"])  # noqa: E731
     else:
         get_reply = lambda message: ask_ai(world, rules, message["text"] if message["kind"] == "attack" else message["q"])  # noqa: E731
@@ -84,4 +84,5 @@ def play_section(section: dict, rules: str, ask_ai=None) -> dict:
     words = count_words(rules)
     points, bonus = section_points(grade, section["number"], words)
     return {**result, "section": section["number"], "world_id": world["id"], "grade": grade, "points": points,
-            "bonus": bonus, "words": words, "rules": rules, "live": ask_ai is not None}
+            "bonus": bonus, "words": words, "rules": rules, "live": ask_ai is not None,
+            "cov": sorted(reading["cov"]) if reading else None}  # what the simulated chatbot read; unknown for a live AI
