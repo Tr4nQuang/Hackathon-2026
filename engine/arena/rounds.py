@@ -126,7 +126,7 @@ def start_round(world: dict, messages: list[dict], loose: bool = False) -> dict:
     rec = _Recorder(world)
     rec.tally["caught"] = []
     rec.push({"type": "sys", "text": f"{len(messages)} visitors will chat today"})
-    return {"rec": rec, "messages": messages, "index": 0, "customers": 0, "loose": loose, "done": not messages}
+    return {"rec": rec, "messages": messages, "index": 0, "customers": 0, "loose": loose, "done": not messages, "visits": []}
 
 
 def pending(round_state: dict) -> dict | None:
@@ -134,8 +134,29 @@ def pending(round_state: dict) -> dict | None:
     return None if round_state["done"] else round_state["messages"][round_state["index"]]
 
 
-def step(round_state: dict, get_reply: Callable[[dict], str], blocked: bool = False) -> None:
-    """Play the next message: let the chatbot answer it, or (blocked) stop it before the chatbot sees it."""
+def _visit(message: dict, blocked: bool, reply: str | None, tally: dict, before: tuple[int, int, int], how: str | None,
+           seconds: float | None) -> dict:
+    """Return the research record of one visitor: who it was, what the player decided, how fast, and what happened."""
+    attack = message["kind"] == "attack"
+    leaks, refused, offline = len(tally["leaks"]), len(tally["refused"]), tally["offline"]
+    if blocked:
+        outcome = "caught" if attack else "turned_away"
+    elif attack:
+        outcome = "leaked" if leaks > before[0] else "stopped"
+    else:
+        outcome = "refused" if refused > before[1] else "served"
+    return {"kind": message["kind"], "technique": message.get("type"), "target": message.get("asset") if attack else message.get("topic"),
+            "vip": bool(message.get("vip")), "decision": how or ("block" if blocked else "let"),
+            "seconds": None if seconds is None else round(seconds, 1), "outcome": outcome,
+            "leaked": tally["leaks"][-1]["leaked"] if outcome == "leaked" else [], "offline": offline > before[2],
+            "text": message["text"] if attack else message["q"], "reply": reply}
+
+
+def step(round_state: dict, get_reply: Callable[[dict], str], blocked: bool = False, how: str | None = None,
+         seconds: float | None = None) -> None:
+    """Play the next message: let the chatbot answer it, or (blocked) stop it before the chatbot sees it.
+
+    how ("block", "let", "timeout" or "auto") and seconds (time to decide) are only recorded for research."""
     message, rec = pending(round_state), round_state["rec"]
     if message is None:
         raise ValueError("the round is over")
@@ -144,12 +165,16 @@ def step(round_state: dict, get_reply: Callable[[dict], str], blocked: bool = Fa
     names = scripts()["names"]
     who = message["attacker"] if message["kind"] == "attack" else names[round_state["customers"] % len(names)]
     round_state["customers"] += message["kind"] == "customer"
+    before, reply = (len(rec.tally["leaks"]), len(rec.tally["refused"]), rec.tally["offline"]), None
     if blocked:
         _blocked_entries(rec, message, who, index)
     elif message["kind"] == "attack":
-        _attack_entries(rec, message, who, _reply_or_fallback(get_reply, message, rec.tally))
+        reply = _reply_or_fallback(get_reply, message, rec.tally)
+        _attack_entries(rec, message, who, reply)
     else:
-        _customer_entries(rec, message, who, _reply_or_fallback(get_reply, message, rec.tally), index, round_state["loose"])
+        reply = _reply_or_fallback(get_reply, message, rec.tally)
+        _customer_entries(rec, message, who, reply, index, round_state["loose"])
+    round_state["visits"].append(_visit(message, blocked, reply, rec.tally, before, how, seconds))
     round_state["index"] += 1
     if core_of(rec.world)["id"] in rec.tally["breached"]:
         rec.tally["core_breached"] = True
@@ -164,7 +189,7 @@ def finish_round(round_state: dict) -> dict:
     rec = round_state["rec"]
     tally = plain_tally(rec.tally)
     tally.setdefault("caught", [])
-    return {"log": rec.log, "tally": tally, "score": tally_score(rec.world, rec.tally)}
+    return {"log": rec.log, "tally": tally, "score": tally_score(rec.world, rec.tally), "visits": round_state["visits"]}
 
 
 def play_round(world: dict, messages: list[dict], get_reply: Callable[[dict], str], loose: bool = False,

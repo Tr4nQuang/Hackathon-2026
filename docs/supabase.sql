@@ -25,9 +25,18 @@ create table plays (
   ai_model text,
   ai_temperature numeric,
   engine_version text,
+  words int,
+  word_budget int,
+  blocks_used int,
+  attacks_blocked int,
+  customers_blocked int,
+  vip_lost boolean,
+  trust_after int,
+  live_ai boolean,
+  visits jsonb,
   constraint mode_fields check (
     (mode = 'endless' and player_rules is not null and chosen_rules is null)
-    or (mode in ('tutorial','level') and chosen_rules is not null and player_rules is null)
+    or (mode in ('tutorial','level') and chosen_rules is not null)
   )
 );
 
@@ -39,3 +48,20 @@ create policy "anon can insert plays" on plays
 grant insert on table public.plays to anon;
 
 -- No select policy on purpose: the public key can insert but never read.
+
+-- Upgrade an existing table to engine_version 3.0.0 (live shifts). Safe to run more than once.
+-- Level rows now keep the rules text too; visits holds one record per visitor (chat texts only with live AI).
+alter table plays add column if not exists words int;
+alter table plays add column if not exists word_budget int;
+alter table plays add column if not exists blocks_used int;
+alter table plays add column if not exists attacks_blocked int;
+alter table plays add column if not exists customers_blocked int;
+alter table plays add column if not exists vip_lost boolean;
+alter table plays add column if not exists trust_after int;
+alter table plays add column if not exists live_ai boolean;
+alter table plays add column if not exists visits jsonb;
+alter table plays drop constraint if exists mode_fields;
+alter table plays add constraint mode_fields check (
+  (mode = 'endless' and player_rules is not null and chosen_rules is null)
+  or (mode in ('tutorial','level') and chosen_rules is not null)
+);

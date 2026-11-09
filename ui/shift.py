@@ -15,13 +15,21 @@ TICK_SECONDS = 0.5
 REVEAL_SECONDS = {"normal": 1.4, "fast": 0.6, "instant": 0.2}  # how long a reply stays alone before the next visitor
 
 
-def decide(key: str, block: bool) -> None:
+def decision_seconds(run: dict, now: float) -> float | None:
+    """Return how long the player took on the waiting visitor, or None when there is no countdown."""
+    limit, deadline = run["cur"]["spec"]["seconds"], run["deadline"]
+    return None if not limit or deadline is None else max(0.0, min(limit, limit - (deadline - now)))
+
+
+def decide(key: str, block: bool, timed_out: bool = False) -> None:
     """Block the waiting visitor or let the chatbot answer, then pause briefly so the reply can be read."""
     run = st.session_state[key]
     shift = run["shift"]
     if shift is None or data.endless.shift_pending(shift) is None:
         return
-    data.endless.shift_step(shift, block=block and shift["blocks_left"] > 0)
+    block = block and shift["blocks_left"] > 0
+    how = "timeout" if timed_out else ("block" if block else "let")
+    data.endless.shift_step(shift, block=block, how=how, seconds=decision_seconds(run, time.monotonic()))
     run.update(deadline=None, reveal_until=time.monotonic() + REVEAL_SECONDS.get(st.session_state.get("speed", "normal"), 1.4))
 
 
@@ -69,7 +77,7 @@ def shift_view(key: str, on_end: Callable[[], None], active: str) -> None:
         if run["deadline"] is None:
             run["deadline"] = now + seconds
         if now >= run["deadline"]:
-            decide(key, False)
+            decide(key, False, timed_out=True)
             visitor, waiting = data.endless.shift_pending(shift), True
     log, total = shift["round"]["rec"].log, len(run["cur"]["messages"])
     show_visitor = visitor if not waiting else None

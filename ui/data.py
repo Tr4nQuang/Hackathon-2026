@@ -41,9 +41,11 @@ def storage_grade(result: dict) -> dict:
 
 
 def storage_result(result: dict) -> dict:
-    """Return a result in the shape engine.storage expects: which zones leaked or turned a customer away, no text."""
+    """Return a result in the shape engine.storage expects: zones leaked or turned away, the shift's numbers and its visitors."""
     tally = result["tally"]
     events = [{"zone": zone, "outcome": "leaked"} for zone in tally["breached"]]
     events += [{"zone": zone, "outcome": "refused"} for zone in tally["refused_topics"]]
     return {"events": events, "package_index": result.get("package", 0), "rules_used": len(result.get("cov") or result.get("selected") or []),
-            "core_hacked": tally["core_breached"]}
+            "core_hacked": tally["core_breached"], "words": result.get("words"), "budget": result.get("budget"),
+            "blocks_used": result.get("blocks_used"), "catches": result.get("catches"), "blocked_customers": result.get("blocked_customers"),
+            "vip_lost": result.get("vip_lost"), "live": bool(result.get("live")), "visits": result.get("visits", [])}

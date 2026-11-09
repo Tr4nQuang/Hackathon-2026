@@ -137,5 +137,5 @@ def play_level(level: dict, attempt: dict, rules: str, blocked: frozenset = froz
     """Play a whole level at once with the player's rules, blocking the messages whose index is in blocked (levels with no blocks)."""
     shift = start_shift(level, attempt, rules)
     while endless.shift_pending(shift) is not None:
-        endless.shift_step(shift, block=shift["round"]["index"] in blocked and shift["blocks_left"] > 0)
+        endless.shift_step(shift, block=shift["round"]["index"] in blocked and shift["blocks_left"] > 0, how="auto")
     return finish_shift(level, attempt, shift)

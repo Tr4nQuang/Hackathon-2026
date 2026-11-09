@@ -88,6 +88,10 @@ run_section(section, player_rules, package_index) in engine/endless.py returns t
 
 ### 4.6 engine/storage.py
 new_session_id(), build_row(...), record_play(mode, scenario_id, level_id, run_id, session_id, attempt_number, result, grade, chosen_rules=None, player_rules=None, guide_skipped=None, ai_model=None, ai_temperature=None) -> bool. Table and rules: docs/supabase.sql and PLAN.md section 7.1.
+Since engine_version 3.0.0 (live shifts): tutorial and level rows may carry player_rules too (the text the player wrote; chosen_rules
+holds the defenses read from it), and build_row also reads these optional keys from result: words, budget, blocks_used, catches,
+blocked_customers, vip_lost, trust_after (Endless only), live and visits (one record per visitor from engine/arena/rounds.py:
+kind, technique, target, vip, decision, seconds, outcome, leaked, offline, text, reply). Texts are kept only for live AI, scrubbed.
 
 ## 5. Phases
 
