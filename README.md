@@ -32,6 +32,9 @@ costs compute, so "refuse everything" and "switch on everything" never win.
 | ![Report: grade, scores and what got through](docs/screenshots/04-results.png) | ![Endless mode: write your rules in plain English](docs/screenshots/05-endless.png) |
 | ![Settings: chat speed, progress, AI connection](docs/screenshots/07-settings.png) | |
 
+The look follows your system: light or dark, with the same colours as the original browser demo. The page loads its
+fonts (Archivo, Atkinson Hyperlegible, IBM Plex Mono) from Google Fonts and falls back to system fonts offline.
+
 ## Run it
 
 You need Python 3.11 or newer.
@@ -64,12 +67,12 @@ The chat and the map change together, message by message.
 
 **Tutorial and Level mode** are scripted, fast and free.
 1. Read the attacker's goal and style (the hint at what they will try).
-2. Pick rule cards from the **Rule shop**. Each rule costs compute (⚡). Some cards are bundles that cost less
+2. Tick rule cards in the **Rule shop**. Each rule costs compute (⚡). Some cards are bundles that cost less
    than the single rules they replace, a few shut a whole topic (which turns real customers away), and some do
    nothing for this round.
 3. Press **Run round**. Every try draws one of four script packages and a new shop, so you cannot memorise one.
-4. Watch the chat (Pause, step back and forward, Skip to the end, 1x/2x/4x speed, a slider and a timeline of
-   verdicts), then read the report: security, helpfulness, compute, the overall score and notes on every leak
+4. Watch the chat in its phone-style window (Pause, step back and forward, Skip to the end, 1x/2x/4x speed, a
+   slider and a timeline of verdicts). When the last message is in, the report opens by itself: security, helpfulness, compute, the overall score and notes on every leak
    and every customer turned away. It never tells you which of your rules were the unnecessary ones.
 
 The tutorial has a 10 step guide (restart it with the Help button). A level opens the next one when you earn at

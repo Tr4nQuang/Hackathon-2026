@@ -62,8 +62,17 @@ def open_level(level_id: str = "level_1", progress: dict | None = None) -> AppTe
 def choose(at: AppTest, cards: list[str]) -> None:
     """Switch the given rule cards on in the current try."""
     for card_id in cards:
-        at.toggle(key=f"card_{at.session_state['try_no']}_{card_id}").set_value(True).run()
+        at.checkbox(key=f"card_{at.session_state['try_no']}_{card_id}").set_value(True).run()
     assert not at.exception, at.exception
+
+
+def finish_round(at: AppTest) -> AppTest:
+    """Skip the chat to its end, then let the pause before the report pass: the report opens by itself."""
+    click(at, "pb_skip")
+    at.session_state["pb_end_since"] = time.monotonic() - 10
+    at.run()
+    assert not at.exception, at.exception
+    return at
 
 
 def at_report(level_id: str = "level_1", perfect: bool = True) -> AppTest:
@@ -72,8 +81,7 @@ def at_report(level_id: str = "level_1", perfect: bool = True) -> AppTest:
     level = data.content.get_level(level_id)
     choose(at, cheapest_perfect_set(level, at.session_state["attempt"]) if perfect else [])
     click(at, "run_round")
-    click(at, "pb_skip")
-    return click(at, "pb_report")
+    return finish_round(at)
 
 
 class Recorder:
@@ -181,7 +189,7 @@ def test_every_level_screen_opens_with_a_playable_shop() -> None:
     for level in data.content.get_levels():
         at = open_level(level["id"])
         assert at.session_state["screen"] == "play" and at.button(key="run_round")
-        assert len(at.toggle) == len(at.session_state["attempt"]["shop"]) >= 8, level["id"]
+        assert len([c for c in at.checkbox if c.key.startswith("card_")]) == len(at.session_state["attempt"]["shop"]) >= 8, level["id"]
 
 
 # ---- a level round -------------------------------------------------------------------------------
@@ -214,7 +222,7 @@ def test_a_new_try_has_new_scripts_and_a_new_shop() -> None:
     click(at, "run_round")
     click(at, "retry_try")
     assert at.session_state["attempt"]["package"] != first_package and at.session_state["try_no"] == first_try + 1
-    assert not any(t.value for t in at.toggle)
+    assert not any(c.value for c in at.checkbox if c.key.startswith("card_"))
 
 
 def test_the_compute_counter_follows_the_choice() -> None:
@@ -243,9 +251,28 @@ def test_playback_controls() -> None:
     at.slider(key=f"pb_slider_{at.session_state['pb_step']}").set_value(5).run()
     assert at.session_state["pb_step"] == 4 and at.session_state["pb_playing"] is False
     click(at, "pb_skip")
-    assert at.session_state["pb_step"] == len(log) - 1 and at.button(key="pb_report") and at.button(key="pb_next").disabled
+    assert at.session_state["pb_step"] == len(log) - 1 and at.button(key="pb_next").disabled
     click(at, "pb_toggle")  # Play from the end starts again at the beginning
     assert at.session_state["pb_step"] == 0 and at.session_state["pb_playing"] is True
+
+
+def test_the_report_opens_by_itself_when_the_chat_ends_and_only_once() -> None:
+    """When the round has played to its end the report opens after a short pause; Close does not bounce back to it."""
+    at = open_level()
+    click(at, "run_round")
+    at.session_state["pb_end_since"] = time.monotonic() - 10
+    at.run()
+    assert at.session_state["screen"] == "play"  # still playing: nothing opens early
+    click(at, "pb_skip")
+    assert at.session_state["screen"] == "play" and at.session_state["pb_end_since"] is not None  # the pause has started
+    at.session_state["pb_end_since"] = time.monotonic() - 10
+    at.run()
+    assert at.session_state["screen"] == "report"
+    click(at, "rp_close")
+    assert at.session_state["screen"] == "play"
+    at.session_state["pb_end_since"] = time.monotonic() - 10
+    at.run()
+    assert at.session_state["screen"] == "play"
 
 
 def test_the_chat_advances_with_time_and_the_speed_setting() -> None:
@@ -318,8 +345,7 @@ def test_the_guide_walks_through_ten_steps_across_three_screens() -> None:
     assert "step 7 of 10" in guide_title(at) and at.session_state["pb_playing"] is False  # the chat waits for the coach
     click(at, "guide_next")
     assert at.session_state["pb_playing"] is True and guide_title(at) == ""
-    click(at, "pb_skip")
-    click(at, "pb_report")
+    finish_round(at)
     for number in (8, 9, 10):
         assert f"step {number} of 10" in guide_title(at) and at.session_state["screen"] == "report"
         click(at, "guide_next")
@@ -381,8 +407,7 @@ def test_consent_is_off_by_default_and_records_once() -> None:
         assert len(recorder.calls) == 1  # one round is stored once, however often the box is toggled
         click(at, "rp_retry")
         click(at, "run_round")
-        click(at, "pb_skip")
-        click(at, "pb_report")
+        finish_round(at)
         second = at.session_state["result"]["run_id"]
         assert second != run_id and at.checkbox(key=f"consent_{second}").value is False and len(recorder.calls) == 1
         at.checkbox(key=f"consent_{second}").check().run()
@@ -396,8 +421,7 @@ def test_the_tutorial_is_stored_with_whether_the_guide_was_skipped() -> None:
         click(at, "home_tutorial")
         click(at, "guide_skip")
         click(at, "run_round")
-        click(at, "pb_skip")
-        click(at, "pb_report")
+        finish_round(at)
         at.checkbox(key=f"consent_{at.session_state['result']['run_id']}").check().run()
         call = recorder.calls[0]
         assert call["mode"] == "tutorial" and call["guide_skipped"] is True and build_row(**call)["guide_skipped"] is True

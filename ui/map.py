@@ -52,7 +52,8 @@ def _fill_and_ink(tier: int, state: str) -> tuple[str, str]:
         return "url(#hatch)", _var(("--warn", "#8f5e0e"))
     if state == "served":
         return _var(("--good-soft", "#dff1e8")), _var(("--ink", "#12202b"))
-    return _var(TIER_FILL[tier]), ("#ffffff" if tier >= 2 else _var(("--ink", "#12202b")))
+    ink = _var(("--t2-ink", "#ffffff")) if tier == 2 else _var(("--t3-ink", "#ffffff")) if tier == 3 else _var(("--ink", "#12202b"))
+    return _var(TIER_FILL[tier]), ink
 
 
 def _outline(tag: str, attrs: str, state: str) -> str:

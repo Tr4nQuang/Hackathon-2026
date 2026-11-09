@@ -249,7 +249,7 @@ def play_screen(run: dict) -> None:
     world = data.endless.world_for_section(run["section"])
     show_header(run, world)
     if run["status"] == "playing":
-        chat.playback_view(world["id"], run["last"]["log"], played_panel(run), lambda finished: None, False, None)
+        chat.playback_view(world["id"], run["last"]["log"], played_panel(run), lambda finished: chat.open_when_done(finished, show_report), False, None)
         return
     rules_col, map_col, chat_col = st.columns([10, 11, 11], gap="medium")
     with rules_col:

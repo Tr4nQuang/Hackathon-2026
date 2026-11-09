@@ -1,4 +1,4 @@
-"""Visual theme: one stylesheet for the whole app (a blue team console look, light theme).
+"""Visual theme: one stylesheet for the whole app (a blue team console look, light or dark like the player's system).
 
 Custom blocks are `st.container(key=...)`, which Streamlit exposes as the CSS class `st-key-<key>`. Text inside
 them is still shown with st.text and st.markdown, never as HTML.
@@ -6,20 +6,40 @@ them is still shown with st.text and st.markdown, never as HTML.
 
 import streamlit as st
 
+FONTS = ("@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800"
+         "&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap');")
+
 TOKENS = """
 :root {
   color-scheme: light;
   --bg: #edf1f4; --surface: #ffffff; --surface-2: #f5f8fa; --ink: #12202b; --muted: #56687a; --line: #d2dbe3;
-  --accent: #1a5da8; --accent-ink: #ffffff; --accent-soft: #e0ebf7;
+  --accent: #1a5da8; --accent-ink: #ffffff; --accent-soft: #e0ebf7; --bean: #6a4529; --bean-soft: #f4ece5;
   --good: #1b7653; --good-soft: #dff1e8; --bad: #b4302a; --bad-soft: #fae4e2;
   --warn: #8f5e0e; --warn-soft: #faefd9; --attack: #8a2f4d; --attack-soft: #f7e6ec;
-  --t0: #dce9f7; --t1: #afcbee; --t2: #5f93d6; --t3: #1f4f92;
+  --t0: #dce9f7; --t1: #afcbee; --t2: #5f93d6; --t3: #1f4f92; --t2-ink: #ffffff; --t3-ink: #ffffff;
   --breach: #1e252c; --breach-ink: #f2766d; --gold: #b7791f; --shadow: 0 1px 2px rgba(18,32,43,.06), 0 6px 20px rgba(18,32,43,.06);
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #0d161d; --surface: #14212b; --surface-2: #192833; --ink: #e4ecf2; --muted: #93a6b5; --line: #26394a;
+    --accent: #6ea6ec; --accent-ink: #08131c; --accent-soft: #1a3049; --bean: #d2a47e; --bean-soft: #2a2119;
+    --good: #52c59a; --good-soft: #123329; --bad: #f2766d; --bad-soft: #3a1a19;
+    --warn: #e5b252; --warn-soft: #352812; --attack: #ee8fae; --attack-soft: #381c27;
+    --t0: #1b2f45; --t1: #244a72; --t2: #3570b5; --t3: #8cbbf2; --t2-ink: #e4ecf2; --t3-ink: #08131c;
+    --breach: #040709; --breach-ink: #f2766d; --gold: #e5b252; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.25);
+  }
 }
 """
 
 PAGE = """
-.stApp { background: var(--bg); color: var(--ink); }
+.stApp { background: var(--bg); color: var(--ink); font-family: var(--f-body); }
+.stApp button, .stApp input, .stApp textarea, .stApp select { font-family: inherit; }
+.stApp h1, .stApp h2, .stApp h3 { font-family: var(--f-display); font-stretch: 112%; }
+.stApp [data-testid="stSidebar"] { display: none; }
 [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"], footer { display: none !important; }
 [data-testid="stMainBlockContainer"] { max-width: 1280px; padding: 1rem 1.25rem 4rem; }
 .stApp h1, .stApp h2, .stApp h3 { font-weight: 800; letter-spacing: -.01em; color: var(--ink); }
@@ -45,7 +65,7 @@ PAGE = """
 [data-testid="stMetricLabel"] p { color: var(--muted); font-size: .8rem; }
 [data-testid="stMetricValue"] { font-weight: 800; font-variant-numeric: tabular-nums; }
 [data-testid="stAlert"] { border-radius: 10px; }
-textarea { font-family: ui-monospace, Menlo, Consolas, monospace !important; font-size: .9rem; }
+textarea { font-family: var(--f-mono) !important; font-size: .9rem; }
 """
 
 SHELL = """
@@ -57,9 +77,10 @@ SHELL = """
   padding: 1.1rem; box-shadow: var(--shadow); min-width: 0; }
 .st-key-panel_map { position: sticky; top: .75rem; }
 [data-testid="stHorizontalBlock"]:has(.st-key-panel_map) { align-items: stretch; }
-.st-key-goal { background: var(--attack-soft); border-radius: 10px; padding: .85rem 1.1rem; }
+.st-key-goal { background: var(--attack-soft); border-radius: 10px; padding: .7rem 1rem; gap: .5rem; }
 .st-key-goal p { margin: 0; }
-[class*="st-key-eyebrow"] p { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .75rem; letter-spacing: .08em;
+[class*="st-key-goalk_"] p { font-family: var(--f-mono); font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; font-weight: 600; color: var(--attack) !important; }
+[class*="st-key-eyebrow"] p { font-family: var(--f-mono); font-size: .75rem; letter-spacing: .08em;
   text-transform: uppercase; color: var(--muted) !important; margin: 0; }
 """
 
@@ -101,32 +122,41 @@ HOME = """
 
 PLAY = """
 [class*="st-key-rcard_"] { background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
-  padding: .55rem .8rem; gap: .1rem; transition: border-color .12s ease, background .12s ease; }
+  padding: .6rem .8rem; gap: 0; transition: border-color .12s ease, background .12s ease; }
 [class*="st-key-rcard_"]:hover { border-color: var(--accent); }
 [class*="st-key-rcard_"]:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
-[class*="st-key-rcard_"] label p { font-weight: 700; }
-[class*="st-key-rcard_"] [data-testid="stMarkdownContainer"] p { font-size: .85rem; color: var(--muted); }
+[class*="st-key-rcard_"] label p { font-weight: 700; font-size: .95rem; text-align: left; padding-left: 0 !important; }
+[class*="st-key-rcard_"] [data-testid="stHorizontalBlock"] { align-items: center; gap: .5rem; }
+[class*="st-key-rcard_"] [data-testid="stCaptionContainer"] p { font-family: var(--f-mono); font-weight: 600; font-size: .85rem; color: var(--gold) !important; text-align: right; white-space: nowrap; }
+[class*="st-key-rcard_"] [data-testid="stMarkdownContainer"] p { font-size: .85rem; color: var(--muted); line-height: 1.4; padding-left: 1.5rem; }
 .st-key-budget { background: var(--surface-2); border-radius: 10px; padding: .6rem .9rem; }
 .st-key-tally [data-testid="stMetric"] { text-align: center; padding: .5rem .3rem; background: var(--surface-2); border: 0; }
 .st-key-tally [data-testid="stMetricValue"] { font-size: 1.4rem; justify-content: center; }
 .st-key-tally [data-testid="stMetricLabel"] { justify-content: center; }
 .legend-row p { font-size: .8rem; color: var(--muted); }
-.st-key-panel_chat { padding: 0 !important; gap: 0; overflow: hidden; }
-.st-key-chat_head { border-bottom: 1px solid var(--line); padding: .7rem 1rem; gap: .1rem; background: var(--surface-2); }
-.st-key-chat_head p { font-weight: 800; }
-.st-key-chat_body { padding: 1rem; gap: .5rem; height: 32rem; max-height: 70vh; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.st-key-panel_chat { padding: 0 !important; gap: 0; overflow: hidden; border-radius: 22px; }
+.st-key-chat_head { border-bottom: 1px solid var(--line); padding: .65rem 1rem; gap: .1rem; background: var(--bean-soft); }
+.st-key-chat_head [data-testid="stHorizontalBlock"] { gap: .6rem; }
+.st-key-chat_head p { margin: 0; }
+.st-key-chat_head strong { font-family: var(--f-display); font-stretch: 108%; font-size: 1rem; }
+.st-key-chat_logo { width: 2.1rem !important; height: 2.1rem !important; min-height: 2.1rem !important; flex: none; border-radius: 8px; background: var(--bean); display: flex;
+  flex-direction: column; align-items: center; justify-content: center; }
+.st-key-chat_logo p { font-size: 1.2rem !important; line-height: 1; }
+.st-key-chat_body { padding: 1rem; gap: .55rem; height: 36rem; max-height: 70vh; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .st-key-chat_body > * { flex: none; }
-[class*="st-key-bub_"] { width: fit-content; max-width: 88%; padding: .55rem .85rem; border-radius: 14px; gap: .1rem; }
+[class*="st-key-msg_"] { max-width: 88%; width: fit-content; gap: .15rem; }
+[class*="st-key-msg_attacker"], [class*="st-key-msg_customer"] { align-self: flex-start; align-items: flex-start; }
+[class*="st-key-msg_bot"] { align-self: flex-end; align-items: flex-end; margin-left: auto; }
+[class*="st-key-msg_"] [data-testid="stCaptionContainer"] p { font-size: .75rem; color: var(--muted); }
+[class*="st-key-msg_attacker"] [data-testid="stCaptionContainer"] p { color: var(--attack); font-weight: 700; }
+[class*="st-key-bub_"] { width: fit-content; max-width: 100%; padding: .55rem .85rem; border-radius: 16px; gap: .1rem; }
 [class*="st-key-bub_"] [data-testid="stText"], [class*="st-key-bub_"] [data-testid="stText"] * {
   font-family: inherit; font-size: .95rem; white-space: pre-wrap; overflow-wrap: anywhere; }
-[class*="st-key-bub_"] [data-testid="stCaptionContainer"] p { font-size: .72rem; margin: 0; letter-spacing: .04em; text-transform: uppercase; }
 [class*="st-key-bub_attacker"] { background: var(--attack-soft); border-bottom-left-radius: 4px; }
-[class*="st-key-bub_attacker"] [data-testid="stCaptionContainer"] p { color: var(--attack); font-weight: 700; }
 [class*="st-key-bub_customer"] { background: var(--accent-soft); border-bottom-left-radius: 4px; }
-[class*="st-key-bub_customer"] [data-testid="stCaptionContainer"] p { color: var(--accent); font-weight: 700; }
-[class*="st-key-bub_bot"] { background: var(--surface-2); border: 1px solid var(--line); border-bottom-right-radius: 4px; margin-left: auto; }
+[class*="st-key-bub_bot"] { background: var(--surface-2); border: 1px solid var(--line); border-bottom-right-radius: 4px; }
 [class*="st-key-judge_"] { width: fit-content; max-width: 94%; margin-left: auto; padding: .25rem .65rem; border-radius: 6px; }
-[class*="st-key-judge_"] * { margin: 0; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .78rem; font-weight: 600; }
+[class*="st-key-judge_"] * { margin: 0; font-family: var(--f-mono); font-size: .78rem; font-weight: 600; }
 [class*="st-key-judge_good"] { background: var(--good-soft); } [class*="st-key-judge_good"] * { color: var(--good); }
 [class*="st-key-judge_bad"] { background: var(--bad-soft); } [class*="st-key-judge_bad"] * { color: var(--bad); }
 [class*="st-key-judge_warn"] { background: var(--warn-soft); } [class*="st-key-judge_warn"] * { color: var(--warn); }
@@ -165,7 +195,7 @@ ARENA = """
 .st-key-panel_report { gap: .9rem; }
 """
 
-CSS = f"<style>{TOKENS}{PAGE}{SHELL}{HOME}{PLAY}{RESULTS}{ARENA}</style>"
+CSS = f"<style>{FONTS}{TOKENS}{PAGE}{SHELL}{HOME}{PLAY}{RESULTS}{ARENA}</style>"
 
 
 def apply_theme() -> None:

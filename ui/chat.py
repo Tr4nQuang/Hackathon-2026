@@ -49,6 +49,24 @@ def advance_if_due(log: list[dict]) -> None:
     state["pb_playing"] = False
 
 
+AUTO_REPORT_DELAY = 1.2  # seconds the last verdict stays on screen before the report opens
+
+
+def open_when_done(finished: bool, open_next: Callable[[], None]) -> None:
+    """After a live round reaches its last entry, wait a moment so the last verdict can be read, then open the report."""
+    state = st.session_state
+    if not finished or not state.get("pb_auto"):
+        state["pb_end_since"] = None
+        return
+    now = time.monotonic()
+    if state.get("pb_end_since") is None:
+        state["pb_end_since"] = now
+    elif now - state["pb_end_since"] >= AUTO_REPORT_DELAY:
+        state.update(pb_end_since=None, pb_auto=False)
+        open_next()
+        st.rerun()
+
+
 def toggle_play(log_length: int) -> None:
     """Pause the chat, or resume it (from the start when it had finished)."""
     state = st.session_state
@@ -86,17 +104,28 @@ def show_entry(index: int, entry: dict) -> None:
             with st.container(key=f"judge_{entry['cls']}_{index}"):
                 st.text(f"{entry['fn']}  {entry['text']}")
         else:
-            with st.container(key=f"bub_{CLS_FOR_ROLE[entry['role']]}_{index}"):
-                st.caption(entry.get("tag", "") + (" · " if entry.get("tag") else "") + entry["name"])
-                st.text(entry["text"])
+            role = CLS_FOR_ROLE[entry["role"]]
+            with st.container(key=f"msg_{role}_{index}"):
+                st.caption(entry["name"] + (f" · {entry['tag']}" if entry.get("tag") else ""))
+                with st.container(key=f"bub_{role}_{index}"):
+                    st.text(entry["text"])
+
+
+def chat_head(world: dict, status: str) -> None:
+    """Show the top of the chat window like a phone: the business logo, the chatbot's name and a status line."""
+    with st.container(key="chat_head"):
+        logo, text = st.columns([1, 9], vertical_alignment="center")
+        with logo, st.container(key="chat_logo"):
+            st.markdown(common.WORLD_ICON[world["id"]])
+        with text:
+            st.markdown(f"**{world['bot']}**")
+            st.caption(f":green[●] {status}")
 
 
 def show_chat(world: dict, log: list[dict], step: int, status: str, typing: bool) -> None:
     """Show the chat window up to the current entry, with a typing indicator while the chatbot is about to answer."""
     with st.container(key="panel_chat"):
-        with st.container(key="chat_head"):
-            st.markdown(f"{common.WORLD_ICON[world['id']]} **{world['bot']}**")
-            st.caption(f"● {status}")
+        chat_head(world, status)
         with st.container(key="chat_body"):
             for index, entry in enumerate(log[: step + 1]):
                 show_entry(index, entry)

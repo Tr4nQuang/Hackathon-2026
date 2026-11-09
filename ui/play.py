@@ -35,21 +35,28 @@ def run_round() -> None:
 
 
 def show_header(level: dict, world: dict) -> None:
-    """Show the world, the title, and the attacker's goal and style."""
+    """Show the world and the title on the left, and the attacker's goal and style on the right."""
     packs = "1 script package" if level.get("tutorial") else f"1 of {len(level['packs'])} script packages, drawn at random"
-    with st.container(key="sec_story"):
+    left, right = st.columns([3, 2], vertical_alignment="bottom")
+    with left, st.container(key="sec_story"):
         common.eyebrow(f"{world['name']} · {packs}", "play")
         st.header(common.level_title(level))
-    with st.container(key="sec_theme"), st.container(key="goal"):
-        st.markdown(f"**Attacker's goal.** {level['goal']}")
-        st.markdown(f"**Their style.** {level['style']}")
+    with right, st.container(key="sec_theme"), st.container(key="goal"):
+        with st.container(key="goalk_goal"):
+            st.markdown("Attacker's goal")
+        st.write(level["goal"])
+        with st.container(key="goalk_style"):
+            st.markdown("Their style")
+        st.write(level["style"])
 
 
 def rule_card(world: dict, card_id: str, try_no: int) -> None:
-    """Show one rule as a card: a toggle with its name and compute cost, and its sentence under it."""
+    """Show one rule as a card: a checkbox with its name, the compute cost on the right and its sentence under it."""
     card = data.content.get_card(card_id, world)
     with st.container(key=f"rcard_{card_id}"):
-        st.toggle(f"{card['label']}  ·  {card['cost']}⚡", key=card_key(try_no, card_id))
+        name, cost = st.columns([5, 1], vertical_alignment="center")
+        name.checkbox(card["label"], key=card_key(try_no, card_id))
+        cost.caption(f"{card['cost']}⚡")
         st.write(card["text"])
 
 
@@ -80,9 +87,7 @@ def map_panel_empty(world: dict) -> None:
 def chat_waiting(world: dict, text: str = WAITING_TEXT) -> None:
     """Show the empty chat window before the round."""
     with st.container(key="panel_chat"):
-        with st.container(key="chat_head"):
-            st.markdown(f"{common.WORLD_ICON[world['id']]} **{world['bot']}**")
-            st.caption("● Waiting for your rules")
+        chat.chat_head(world, "Waiting for your rules")
         with st.container(key="chat_body"):
             st.caption(text)
 
@@ -117,11 +122,9 @@ def rules_used_panel(world: dict, level: dict, result: dict):
     return panel
 
 
-def report_button(finished: bool) -> None:
-    """Show the See report button once the chat has finished."""
-    if finished and st.button("See report", type="primary", key="pb_report"):
-        common.goto("report")
-        st.rerun()  # a button inside a fragment only reruns the fragment, so rerun the whole app
+def open_report() -> None:
+    """Open the report of the round (used when the chat has played to its end)."""
+    common.goto("report")
 
 
 def play_screen() -> None:
@@ -137,7 +140,7 @@ def play_screen() -> None:
     guide.show("run" if result else "play", level)
     show_header(level, world)
     if result:
-        chat.playback_view(world["id"], result["log"], rules_used_panel(world, level, result), report_button,
+        chat.playback_view(world["id"], result["log"], rules_used_panel(world, level, result), lambda finished: chat.open_when_done(finished, open_report),
                            False, level if data.get_guide_steps(level) else None)
         return
     rules_col, map_col, chat_col = st.columns([10, 11, 11], gap="medium")

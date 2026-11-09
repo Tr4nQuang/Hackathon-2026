@@ -144,4 +144,4 @@ def new_run_id() -> str:
 
 def start_playback() -> None:
     """Show the first entry of the current round and let the chat play on its own."""
-    st.session_state.update(pb_step=0, pb_playing=True, pb_last=time.monotonic())
+    st.session_state.update(pb_step=0, pb_playing=True, pb_last=time.monotonic(), pb_auto=True, pb_end_since=None)

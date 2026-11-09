@@ -96,3 +96,10 @@ Branch james/arena-parity. The goal was to make the Streamlit game the same game
 ### Notes
 - This work touches engine/, scenarios/ and tests/ (Dong's folders): engine/arena/, scenarios/arena/, tests/test_arena.py, tests/test_ui_pure.py and a rewritten tests/test_app_smoke.py. ui/screens.py and ui/playback.py were deleted because the new screens replace them. The old engine, loader, storage and save modules are unchanged and still pass their tests.
 - Tests: tests/test_arena.py (engine), tests/test_ui_pure.py (map, local files, saves, notes, Endless run) and tests/test_app_smoke.py (flows in Streamlit's AppTest). Every shop of every level and package is checked to allow a Perfect round.
+
+### Look and flow changes after review (B, James)
+- The theme now follows the system, light or dark, with the demo's own colour tokens (ui/theme.py, and `[theme.light]` / `[theme.dark]` in .streamlit/config.toml so Streamlit's widgets match). This replaces the earlier decision to lock a light theme. The map has `--t2-ink` / `--t3-ink` tokens because the core is light and its text dark in dark mode.
+- Fonts are the demo's (Archivo, Atkinson Hyperlegible, IBM Plex Mono) loaded from Google Fonts, with system fallbacks. This replaces the earlier "system fonts only" decision, and means the page makes one request to fonts.googleapis.com.
+- Rule cards use checkboxes (not toggles), the compute cost on the right in gold.
+- The chat is a phone-style window: logo, name and status in the header, a fixed height with its own scrollbar, the sender above each bubble.
+- When the chat reaches its last message the report opens by itself after 1.2 seconds (the round, and an Endless section). It happens once per round, so Close does not bounce back. The Report button stays as a fallback.
