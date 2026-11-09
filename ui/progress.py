@@ -18,7 +18,8 @@ MAX_SECTION = 999
 MAX_RULES = 1000
 MAX_HISTORY = 200
 MAX_SEED = 10**9
-RUN_KEYS = {"section", "score", "passed", "rules", "seed", "run_id", "over", "history"}
+RUN_KEYS = {"section", "score", "passed", "rules", "seed", "run_id", "over", "trust", "history"}
+MAX_TRUST = 100
 HISTORY_KEYS = {"n", "world", "grade", "points", "row"}
 
 
@@ -104,7 +105,7 @@ def _valid_run(run: object) -> bool:
     except ValueError:
         return False
     return (_count(run["section"], MAX_SECTION) and run["section"] >= 1 and _count(run["score"], MAX_POINTS) and _count(run["passed"], MAX_SECTION)
-            and _short_text(run["rules"], MAX_RULES) and _count(run["seed"], MAX_SEED) and type(run["over"]) is bool
+            and _short_text(run["rules"], MAX_RULES) and _count(run["seed"], MAX_SEED) and type(run["over"]) is bool and _count(run["trust"], MAX_TRUST)
             and isinstance(run["history"], list) and len(run["history"]) <= MAX_HISTORY and run["passed"] <= len(run["history"])
             and all(_valid_history_row(row) for row in run["history"]))
 
