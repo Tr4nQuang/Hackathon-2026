@@ -17,7 +17,12 @@
         "menu",
         "booking"
       ],
-      "n": 3
+      "n": 3,
+      "slack": 14,
+      "blocks": 0,
+      "intel": "full",
+      "vip": false,
+      "twist": "Warm-up: no countdown, no blocks. Learn to turn intel into rules."
     },
     {
       "world": "cafe",
@@ -36,7 +41,12 @@
         "booking",
         "loyalty"
       ],
-      "n": 3
+      "n": 3,
+      "slack": 12,
+      "blocks": 0,
+      "intel": "full",
+      "vip": false,
+      "twist": "Warm-up: no countdown, no blocks. They claim to be someone important."
     },
     {
       "world": "cafe",
@@ -55,7 +65,12 @@
         "student",
         "hours"
       ],
-      "n": 4
+      "n": 4,
+      "slack": 12,
+      "blocks": 0,
+      "intel": "full",
+      "vip": false,
+      "twist": "Warm-up: no countdown, no blocks. They try to rewrite the chatbot's orders."
     },
     {
       "world": "cafe",
@@ -75,7 +90,13 @@
         "menu",
         "hours"
       ],
-      "n": 4
+      "n": 4,
+      "slack": 10,
+      "blocks": 1,
+      "intel": "full",
+      "vip": false,
+      "twist": "Rush hour: visitors don't wait. Block one attacker yourself, within 14 seconds.",
+      "seconds": 14
     },
     {
       "world": "cafe",
@@ -95,7 +116,13 @@
         "loyalty",
         "booking"
       ],
-      "n": 5
+      "n": 5,
+      "slack": 8,
+      "blocks": 2,
+      "intel": "full",
+      "vip": false,
+      "twist": "Boss shift: every attacker uses combined tricks, and your rules have fewer words to spare.",
+      "seconds": 12
     },
     {
       "world": "dealer",
@@ -114,7 +141,13 @@
         "hours",
         "financing"
       ],
-      "n": 3
+      "n": 3,
+      "slack": 10,
+      "blocks": 1,
+      "intel": "full",
+      "vip": true,
+      "twist": "VIP customer: one visitor is an important client. Turn them away and the shift is lost.",
+      "seconds": 13
     },
     {
       "world": "dealer",
@@ -133,7 +166,13 @@
         "service",
         "testdrive"
       ],
-      "n": 4
+      "n": 4,
+      "slack": 8,
+      "blocks": 1,
+      "intel": "full",
+      "vip": false,
+      "twist": "Tight budget: only a few spare words. Say more with less.",
+      "seconds": 12
     },
     {
       "world": "dealer",
@@ -153,7 +192,13 @@
         "hours",
         "listed"
       ],
-      "n": 4
+      "n": 4,
+      "slack": 6,
+      "blocks": 2,
+      "intel": "full",
+      "vip": true,
+      "twist": "Boss shift with a VIP client. Block carefully: not every visitor is an attacker.",
+      "seconds": 10
     },
     {
       "world": "dealer",
@@ -173,7 +218,13 @@
         "financing",
         "service"
       ],
-      "n": 5
+      "n": 5,
+      "slack": 5,
+      "blocks": 2,
+      "intel": "targets",
+      "vip": false,
+      "twist": "Intel is thinner: you know the targets, not their methods. A VIP is on the line.",
+      "seconds": 9
     },
     {
       "world": "uni",
@@ -192,7 +243,13 @@
         "registration",
         "tuition"
       ],
-      "n": 3
+      "n": 3,
+      "slack": 6,
+      "blocks": 2,
+      "intel": "targets",
+      "vip": true,
+      "twist": "VIP shift with partial intel: you only know about one target.",
+      "seconds": 9
     },
     {
       "world": "uni",
@@ -211,7 +268,13 @@
         "exams",
         "library"
       ],
-      "n": 4
+      "n": 4,
+      "slack": 5,
+      "blocks": 2,
+      "intel": "partial",
+      "vip": false,
+      "twist": "Tight budget and partial intel.",
+      "seconds": 8
     },
     {
       "world": "uni",
@@ -231,7 +294,13 @@
         "tuition",
         "wellness"
       ],
-      "n": 5
+      "n": 5,
+      "slack": 4,
+      "blocks": 3,
+      "intel": "partial",
+      "vip": true,
+      "twist": "The final shift: partial intel, a VIP client, little time and almost no spare words.",
+      "seconds": 7
     }
   ],
   "tutorial": {
@@ -271,20 +340,20 @@
       {
         "id": "goal",
         "target": "theme",
-        "title": "The attacker's goal",
-        "text": "This card hints at what the attacker wants and how they behave, without telling you exactly what they will ask."
+        "title": "Intel",
+        "text": "This card hints at what the attacker wants and how they behave. The line below it names their targets and their methods. Use it to decide what your rules must cover."
       },
       {
         "id": "pick_rules",
         "target": "rules",
-        "title": "Pick your rules",
-        "text": "Each rule costs compute. A rule that does no work, or one that turns customers away, lowers your grade, and picking everything will fail. Choose only what this attack team needs."
+        "title": "Write your rules",
+        "text": "Type your security rules in plain English, in the box. You have a word budget, so you can't guard everything: cover what this attack team will try, and nothing vague. \"Never reveal anything\" also silences real customers."
       },
       {
         "id": "run",
         "target": "start_button",
-        "title": "Run the round",
-        "text": "Press Run round to send the attackers and the customers to the chatbot, one chat at a time."
+        "title": "Start the shift",
+        "text": "Press Start shift to send the attackers and the customers to the chatbot, one chat at a time. Later levels give you blocks and a countdown to decide on each visitor yourself."
       },
       {
         "id": "watch",
@@ -296,7 +365,7 @@
         "id": "report",
         "target": "results",
         "title": "The report",
-        "text": "See your security, your helpfulness, the compute you used and your overall score, then read what got through and who was turned away."
+        "text": "See your security, your helpfulness, the words you used and your overall score, then read what got through and who was turned away."
       },
       {
         "id": "replay",
@@ -308,9 +377,14 @@
         "id": "retry_next",
         "target": "retry_next_buttons",
         "title": "Try again or move on",
-        "text": "Try again draws new scripts and a new shop, so think it through again. Next level opens when you earn at least one star."
+        "text": "Try again draws new scripts, so think it through again. Next level opens when you earn at least one star."
       }
-    ]
+    ],
+    "slack": 20,
+    "blocks": 0,
+    "intel": "full",
+    "vip": false,
+    "twist": "Practice: no countdown, no blocks."
   },
   "packages": 4
 }

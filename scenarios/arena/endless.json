@@ -78,7 +78,8 @@
     "full": "Intel: they're after {targets}. Expect {techniques}.",
     "targets": "Intel: they're after {targets}. Their methods are unknown.",
     "partial": "Intel is patchy: they're after {first}, and something else.",
-    "recon": "They studied your last rules: nothing in them covered {gaps}, so expect them to try that."
+    "recon": "They studied your last rules: nothing in them covered {gaps}, so expect them to try that.",
+    "none": "No intel this time: you don't know what they're after."
   },
   "technique_name": {
     "direct": "plain questions",
