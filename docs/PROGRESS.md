@@ -87,7 +87,7 @@ Branch james/arena-parity. The goal was to make the Streamlit game the same game
 ### Differences from the demo, on purpose
 - There is no API key field in the game. The key stays in .env (project rule). Settings only shows whether live AI and storage are set up, never a value.
 - The record board is a local file (data/records.json, git ignored), not a shared server board.
-- Level progress lasts for the browser session (Settings can reset it) instead of localStorage.
+- Level progress and Endless section bests are saved in the browser (localStorage, through ui/progress.py by Boctok0); Settings can reset them.
 - The level map is the demo's winding path: numbered bubbles (locked, next, done, perfect), stars earned below, a dotted line through them and a banner for each business.
 - No JSON file upload or download anywhere. Save my game, Load my game and the progress export and import were removed (by request). engine/save.py is unchanged and still tested.
 - The 30 second pause between Endless runs only applies with live AI (it protects the free quota).

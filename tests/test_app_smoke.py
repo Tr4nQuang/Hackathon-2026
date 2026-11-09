@@ -682,6 +682,36 @@ def test_resetting_progress_asks_first() -> None:
     assert at.session_state["progress"] == {} and at.button(key="set_reset")
 
 
+def test_home_continue_and_start_over_with_saved_progress() -> None:
+    """With saved progress Home shows Continue and the Endless numbers; Start over asks once, then clears both."""
+    at = new_app()
+    assert not [b for b in at.button if b.key in ("home_continue", "home_start_over")]
+    at.session_state["progress"] = {"level_1": {"stars": 2, "best": 60, "perfect": False}}
+    at.session_state["endless_best"] = {"1": {"best": 800, "cleared": True}, "2": {"best": 90, "cleared": False}}
+    at.run()
+    assert "2" in at.button(key="home_continue").label
+    assert any("Score 800 · Cleared 1" in c.value for c in at.caption)
+    click(at, "home_start_over")
+    assert at.session_state["progress"] and at.button(key="home_reset_yes")
+    click(at, "home_reset_no")
+    assert at.session_state["progress"] and at.button(key="home_start_over")
+    click(at, "home_start_over")
+    click(at, "home_reset_yes")
+    assert at.session_state["progress"] == {} and at.session_state["endless_best"] == {}
+    assert not [b for b in at.button if b.key == "home_continue"]
+    click(at, "nav_settings")
+    click(at, "nav_home")
+    assert not [b for b in at.button if b.key == "home_continue"]
+
+
+def test_the_endless_lobby_shows_the_saved_numbers() -> None:
+    """A played section is remembered and the Endless lobby shows the saved Score and Cleared."""
+    at = new_app()
+    at.session_state["endless_best"] = {"1": {"best": 500, "cleared": True}, "2": {"best": 250, "cleared": True}}
+    click(at, "nav_endless")
+    assert any("Score 750 · Cleared 2" in m.value for m in at.markdown)
+
+
 def test_the_settings_show_the_connection_without_any_key_field() -> None:
     """The AI panel names the mode and the .env file, there is no text field for a key, and storage is never shown as a value."""
     at = new_app()

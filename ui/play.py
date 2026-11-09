@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from ui import chat, common, data, guide, icons
+from ui import chat, common, data, guide, icons, progress
 
 PACKAGE_LETTERS = "ABCD"
 SHOP_NOTE = ("Each rule costs compute (⚡). Rules that do no work lower your grade, "
@@ -31,6 +31,7 @@ def run_round() -> None:
     result.update(run_id=common.new_run_id(), attempt=state["attempts"][level["id"]], recorded=False, saved=False)
     state["result"] = result
     common.record_progress(level, result)
+    progress.request_save()
     common.start_playback()
 
 

@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from ui import common, data, store
+from ui import common, data, progress, store
 from ui.common import STAR
 from ui.map import build_map_svg
 
@@ -38,6 +38,24 @@ def grade_tiles() -> None:
             st.write(text)
 
 
+def continue_panel(cleared: int, total: int) -> None:
+    """Show Continue with the saved progress, and a Start over link that asks once before clearing it."""
+    state = st.session_state
+    score, sections = progress.endless_totals(state.get("endless_best", {}))
+    stars = sum(row["stars"] for row in state["progress"].values())
+    st.button(f"Continue · {cleared}/{total} levels · {stars} {STAR}", type="primary", key="home_continue",
+              on_click=common.goto, args=("levels",), use_container_width=True)
+    if sections:
+        st.caption(f"Endless saved: Score {score} · Cleared {sections}")
+    if not state.get("home_confirm_reset"):
+        st.button("Start over", type="tertiary", key="home_start_over", on_click=lambda: state.update(home_confirm_reset=True))
+        return
+    st.write("Erase all level and Endless progress saved in this browser?")
+    yes, cancel, _ = st.columns([2, 2, 3])
+    yes.button("Yes, start over", key="home_reset_yes", on_click=lambda: (progress.clear_saved(), state.update(home_confirm_reset=False)))
+    cancel.button("Cancel", key="home_reset_no", on_click=lambda: state.update(home_confirm_reset=False))
+
+
 def home_screen() -> None:
     """Show the pitch, the three game modes and how a round is graded."""
     state = st.session_state
@@ -52,8 +70,11 @@ def home_screen() -> None:
                      "what it knows while real customers still need answers. The closer to the core, the more it is worth: "
                      "admin passwords, bank accounts, personal records and actions the bot should never take. Opening hours "
                      "sit at the edge.")
+        saved = progress.has_saved()
+        if saved:
+            continue_panel(cleared, len(levels))
         tutorial, play, endless = st.columns(3)
-        tutorial.button("Play the tutorial", type="primary", key="home_tutorial", on_click=common.start_tutorial, use_container_width=True)
+        tutorial.button("Play the tutorial", type="secondary" if saved else "primary", key="home_tutorial", on_click=common.start_tutorial, use_container_width=True)
         play.button("Level mode", key="home_play", on_click=common.goto, args=("levels",), use_container_width=True)
         endless.button("Endless mode", key="home_endless", on_click=common.open_place, args=("endless",), use_container_width=True)
         st.caption(HERO_NOTE)

@@ -91,8 +91,10 @@ score gives 3 stars at 85%, 2 stars at 70% and 1 star at 50%, as long as securit
 helpfulness at least 30%. Every ⚡ that did no work costs 14% of the round's points. A breached core is an
 instant loss.
 
-**Progress.** Level stars and best scores last for the browser session (Settings can reset them). Finished Endless
-runs can be saved to the record board on your computer.
+**Progress.** Level stars, best scores and your best points for each Endless section are saved automatically,
+only in this browser on this computer, and never sent anywhere. Nothing you type is saved. Next time, press
+*Continue* on the Home screen, or *Start over* (it asks once) to clear it. Finished Endless runs can also go on
+the record board on your computer.
 
 Even a perfect result carries one honest lesson. Rules in a prompt are only the first layer of defence. The
 best defence is to never give a chatbot a secret it does not need.
@@ -101,7 +103,8 @@ best defence is to never give a chatbot a secret it does not need.
 
 ```
 app.py          Streamlit entry point, routes between the screens
-ui/             interface: home, levels, play and replay, report, Endless, records, settings,
+ui/             interface: home, levels, play and replay, report, Endless, records, settings, browser
+                saved progress (progress.py),
                 the shared chat and map playback (chat.py), the tutorial guide, the SVG System Core
                 map, the stylesheet (theme.py), the top bar (shell.py), local files (store.py) and
                 data.py (the only file that talks to engine/)

@@ -2,14 +2,15 @@
 
 import streamlit as st
 
-from ui import common, data
+from ui import common, data, progress
 
 SPEEDS = ("normal", "fast", "instant")
 AI_HELP = ("The API key is never typed into the game. It is read from the .env file on the computer that runs the game, "
            "and that file is never committed. To switch on live AI, copy .env.example to .env, set USE_FAKE_AI=false, "
            "add your own GEMINI_API_KEY and restart the game.")
 STORAGE_HELP = "Anonymous results are only stored when you tick the box on a report, and only if SUPABASE_URL and SUPABASE_KEY are set in .env."
-PROGRESS_NOTE = "Level stars and best scores last until you close this tab."
+PROGRESS_NOTE = ("Level stars, best scores and Endless section bests are saved only in this browser on this computer, "
+                 "and never sent anywhere.")
 
 
 def set_speed() -> None:
@@ -29,7 +30,7 @@ def cancel_reset() -> None:
 
 def reset_progress() -> None:
     """Erase all level progress."""
-    st.session_state.update(progress={}, confirm_reset=False, last_package={})
+    progress.clear_saved()
 
 
 def speed_panel() -> None:
@@ -48,13 +49,13 @@ def progress_panel() -> None:
         st.subheader("Progress")
         st.caption(PROGRESS_NOTE)
         if state.get("confirm_reset"):
-            st.write("Erase all level progress? This can't be undone.")
+            st.write("Erase all level and Endless progress saved in this browser? This can't be undone.")
             erase, keep, _ = st.columns([2, 2, 5])
             erase.button("Erase progress", key="set_erase", on_click=reset_progress)
             keep.button("Cancel", key="set_cancel", on_click=cancel_reset)
         else:
             reset, _ = st.columns([2, 7])
-            reset.button("Reset level progress", key="set_reset", on_click=ask_reset)
+            reset.button("Reset progress", key="set_reset", on_click=ask_reset)
 
 
 def connection_panel() -> None:
