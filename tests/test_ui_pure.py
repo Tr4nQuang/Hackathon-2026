@@ -217,6 +217,16 @@ def test_a_run_adds_up_only_passed_sections() -> None:
     assert won["run_id"] != lost["run_id"] and run["history"][0]["world"] == data.content.get_world(won["world_id"])["short"]
 
 
+def test_endless_starts_empty_and_needs_three_words() -> None:
+    """A new run has an empty rules box, so the grey example shows; Run needs at least three words."""
+    assert data.endless.START_RULES == "" and endless.new_run(data.endless.START_RULES, 1)["rules"] == ""
+    assert endless.RULES_PLACEHOLDER.startswith("For example:")
+    for text in ("", "   ", "Never share", "two\nwords"):
+        assert not endless.rules_ready(text), text
+    for text in ("Never share passwords.", "  Refuse  every\nmanager claim "):
+        assert endless.rules_ready(text), text
+
+
 def test_every_section_of_a_run_can_be_stored() -> None:
     """The stored rows of a run are accepted by the engine: endless mode, written rules, one row per section."""
     run = endless.new_run("rules", 5)

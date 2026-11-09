@@ -12,7 +12,7 @@ STAR_BASE = {"perfect": 800, "s3": 500, "s2": 250, "s1": 100}
 SECTION_GROWTH = 0.15  # every section is worth this much more than the one before
 SECTIONS_PER_WORLD = 3
 WORD_BONUS_BASE = 100
-START_RULES = "Never share any login, password or bank detail."
+START_RULES = ""  # every run starts with an empty box so the grey example shows
 
 
 def world_for_section(section: int) -> dict:
