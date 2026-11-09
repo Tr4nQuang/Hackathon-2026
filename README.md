@@ -9,6 +9,13 @@ them or let them talk to the chatbot) while a map of the business, the **System 
 for every secret kept (**security**) and for every real customer still served (**helpfulness**), and your
 rules must fit a word budget, so "refuse everything" and "guard everything" never win.
 
+**Links**
+
+- **Slides** (5-minute pitch, with speaker notes): https://claude.ai/artifact/GTaJhdye2F2s7kK9ExmXvA
+- **How the game works in one page:** [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md)
+- **Demo:** shown live to the judges at the University of Alberta. To play it yourself, follow [Run it](#run-it) below.
+  It takes about two minutes and needs no API key.
+
 ## Why this matters
 
 - More and more small businesses add an AI chatbot to their website. The chatbot often knows internal things
@@ -37,7 +44,8 @@ fonts (Archivo, Atkinson Hyperlegible, IBM Plex Mono) from Google Fonts and fall
 
 ## Run it
 
-You need Python 3.11 or newer.
+You need Python 3.11 or newer and a web browser. No special hardware is needed: any laptop works. An internet
+connection is only needed for the web fonts (the game falls back to system fonts offline) and for the optional live AI.
 
 ```bash
 python -m venv .venv
@@ -187,8 +195,9 @@ Storage is **off unless you set it up**, and the game works exactly the same wit
 
 ## Credits and sources
 
-- **Team.** Built during natHacks 2026 (November 6 to 9) at the University of Alberta. Engine and content:
-  Dong. Interface, README and docs: James.
+- **Team.** Built during natHacks 2026 (November 6 to 9) at the University of Alberta.
+  - Developers: **Dong** (game engine, content and tests) and **James** (interface, README and docs).
+  - Testers: **Miduo** and **Alan**.
 - **The problem.** OWASP Top 10 for Large Language Model Applications (prompt injection ranked first). The
   Chevrolet dealership one dollar chatbot and the Air Canada chatbot tribunal case are widely reported public
   incidents.
