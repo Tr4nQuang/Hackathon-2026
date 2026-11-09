@@ -91,10 +91,26 @@ score gives 3 stars at 85%, 2 stars at 70% and 1 star at 50%, as long as securit
 helpfulness at least 30%. Every ⚡ that did no work costs 14% of the round's points. A breached core is an
 instant loss.
 
-**Progress.** Level stars, best scores and your best points for each Endless section are saved automatically,
-only in this browser on this computer, and never sent anywhere. Nothing you type is saved. Next time, press
-*Continue* on the Home screen, or *Start over* (it asks once) to clear it. Finished Endless runs can also go on
-the record board on your computer.
+**Progress and continuing later.** Level stars, best scores and your best points for each Endless section are saved
+automatically, only in this browser on this computer, and never sent anywhere. An Endless run in progress is kept too
+(its section, score, the rules you wrote and one line of results per section), so you can close the game and come back:
+press *Continue your Endless run* on the Home screen or in the Endless lobby. It starts at the next section with your
+rules and score. A run that ended is kept as "last run" so you can still see its result and download its file. The saved
+run is replaced when you finish a section of a new run, and *Start over* on Home (it asks once) clears everything. The chat
+of earlier sections is not kept, so there is no replay of them after closing.
+
+**Sending your Endless run to the admin.** When a run is over, *Download run file (CSV)* gives one file with one line per
+section: when it was played, the business, the grade and points, security and helpfulness, how many words and characters
+your rules had, **the rules you wrote**, which zones leaked or turned a customer away, and whether live AI was used. It has
+no name, and anything that looks like an email address or phone number in your rules is replaced by `[removed]`. The file is
+a CSV (UTF-8) so the admin can open it in Excel or Google Sheets. Nothing is sent by the game: you choose whether to send the
+file (for example by email). The admin puts many files together with:
+
+```bash
+python tools/merge_runs.py folder_with_the_files -o all_endless_runs.csv
+```
+
+It skips files that are not run files, keeps a section that was sent twice once, sorts by time and prints a short summary.
 
 Even a perfect result carries one honest lesson. Rules in a prompt are only the first layer of defence. The
 best defence is to never give a chatbot a secret it does not need.
@@ -114,6 +130,7 @@ engine/         game logic: engine/arena/ (worlds, rule cards, scripts, rounds, 
                 storage, and call_ai() (every AI call goes through it)
 scenarios/      game content as JSON: the first café scenarios, and scenarios/arena/ (worlds, rule
                 cards, levels, attack and customer scripts)
+tools/          admin tools: tools/merge_runs.py merges the run files players send
 tests/          plain assert tests, `python tests/run_all.py` runs them all
 docs/           plan, build contract (MASTER_PROMPT.md), sample data, supabase.sql, screenshots
 ```
