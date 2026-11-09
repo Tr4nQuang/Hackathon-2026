@@ -2,3 +2,4 @@ streamlit
 google-genai
 python-dotenv
 supabase
+streamlit-js-eval==1.0.0
