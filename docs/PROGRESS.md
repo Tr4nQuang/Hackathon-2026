@@ -86,7 +86,7 @@ Branch james/arena-parity. The goal was to make the Streamlit game the same game
 
 ### Differences from the demo, on purpose
 - There is no API key field in the game. The key stays in .env (project rule). Settings only shows whether live AI and storage are set up, never a value.
-- The record board is a local file (data/records.json, git ignored), not a shared server board.
+- The record board is a local file (local_data/records.json, git ignored), not a shared server board.
 - Level progress and Endless section bests are saved in the browser (localStorage, through ui/progress.py by Boctok0); Settings can reset them.
 - The level map is the demo's winding path: numbered bubbles (locked, next, done, perfect), stars earned below, a dotted line through them and a banner for each business.
 - No JSON file upload or download anywhere. Save my game, Load my game and the progress export and import were removed (by request). engine/save.py is unchanged and still tested.
@@ -105,12 +105,5 @@ Branch james/arena-parity. The goal was to make the Streamlit game the same game
 - When the chat reaches its last message the report opens by itself after 1.2 seconds (the round, and an Endless section). It happens once per round, so Close does not bounce back. The Report button stays as a fallback.
 - Icons are inline SVG drawn in ui/icons.py (shield, cup, car, cap, bolt), not emoji, so they line up in the top bar, business banners, chat header and rule costs. The chat is a phone frame: bezel, speaker slot, status bar, home bar and a fixed 44rem height whose body scrolls.
 
-## Browser game as the main interface (branch james/aalebell-fork)
-This branch is the browser demo fork (AAlebell/Hackathon-James-trian-fork-2026, the original demo split into ES modules) with all of `main` merged in. The browser game is now the main interface and the Streamlit game is kept.
-
-- Front end: `index.html`, `css/`, `js/`, `data/` are the fork's, with only these changes: the developer panel for typing an API key is replaced by an AI connection panel (status, test button, no key field), and reports have a consent box (js/services/share.js).
-- Back end: `server.py` is rewritten on the Python engine. AI replies and attacks go through `call_ai()` (Gemini, key in `.env` only), records through `engine/records.py` (one file, `local_data/records.json`, shared with the Streamlit game), anonymous plays through `engine/storage.py`. The fork's Anthropic client, passcode, `/api/dev/*` endpoints and key saving are gone (hard rule: no key typed into the game).
-- `engine/records.py` is new (the logic that was in `ui/store.py`, which is now a thin adapter). `engine/arena/live.py` gained helpers for the browser game (`chatbot_reply`, `plan_attacks`, `is_ready`).
-- `.gitignore` tracks the fork's `data/` folder and ignores `local_data/` (the record board).
-- Tests: `tests/test_server.py` (static files, same-origin POSTs, validation, records, AI helpers, no key endpoints) and `tests/test_front_parity.py` (Node loads `data/` and compares worlds, cards and levels with `scenarios/arena/`; all JavaScript parses and its imports exist). The browser flow was also walked through in a real browser: tutorial, consent box, Endless, record board, settings.
-- Not done: the browser game has no tutorial skip button (so `guide_skipped` is always false), and the Streamlit-only extras (the 10-step highlight guide, Continue / Start over on Home) are not in the browser game.
+## Browser game removed (branch james/aalebell-fork)
+The browser game (the AAlebell fork: `index.html`, `css/`, `js/`, `data/`, `server.py`, its two tests and its screenshots, served at http://localhost:8000) was removed by request: the Streamlit game is the one in use. It stays in the git history (the commit before this one). The record board now lives in `engine/records.py` (file `local_data/records.json`) and `ui/store.py` is a thin adapter to it. The server-only AI helpers in `engine/arena/live.py` were removed with it.

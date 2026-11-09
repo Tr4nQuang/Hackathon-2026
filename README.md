@@ -25,48 +25,35 @@ costs compute, so "refuse everything" and "switch on everything" never win.
 
 ## Screenshots
 
-The browser game (the main interface):
-
 | | |
 |---|---|
-| ![Home: the pitch, the three game modes and an example System Core map](docs/screenshots/browser-1-home.png) | ![Level map: a winding path of numbered bubbles](docs/screenshots/browser-2-levels.png) |
-| ![Rule shop with compute costs, the System Core map and the chat](docs/screenshots/browser-3-rule-shop.png) | ![Round report with notes on every leak and a consent box](docs/screenshots/browser-5-report.png) |
-| ![Settings: AI connection status, no key field](docs/screenshots/browser-6-settings.png) | |
+| ![Home: the pitch, the three game modes and an example System Core map](docs/screenshots/01-home.png) | ![Level map: a winding path of numbered bubbles, stars earned below each](docs/screenshots/06-levels.png) |
+| ![The tutorial guide highlights one part of the screen and dims the rest](docs/screenshots/02-tutorial-guide.png) | ![Playback: your rules, the System Core map and the chat change together](docs/screenshots/03-playback.png) |
+| ![Report: grade, scores and what got through](docs/screenshots/04-results.png) | ![Endless mode: write your rules in plain English](docs/screenshots/05-endless.png) |
+| ![Settings: chat speed, progress, AI connection](docs/screenshots/07-settings.png) | |
 
-The Streamlit game (same engine, same rules):
-
-| | |
-|---|---|
-| ![Home](docs/screenshots/01-home.png) | ![Level map](docs/screenshots/06-levels.png) |
-| ![Playback with the phone-style chat](docs/screenshots/03-playback.png) | ![Report](docs/screenshots/04-results.png) |
+The look follows your system: light or dark, with the same colours as the original browser demo. The page loads its
+fonts (Archivo, Atkinson Hyperlegible, IBM Plex Mono) from Google Fonts and falls back to system fonts offline.
 
 ## Run it
 
-You need Python 3.11 or newer (and any modern browser).
+You need Python 3.11 or newer.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env               # Windows: copy .env.example .env
-python test_engine.py              # runs every test (engine, server, interfaces), no API cost
-python server.py                   # the browser game: open http://localhost:8000
-streamlit run app.py               # or the Streamlit game
+python test_engine.py              # runs every test (engine and interface), no API cost
+streamlit run app.py
 ```
 
-Two interfaces share one Python engine:
-- **The browser game** (`index.html`, `css/`, `js/`, `data/`) is the main interface. `server.py` serves it and
-  answers its `/api/*` calls with the Python engine: live AI through `call_ai()`, the record board and the optional
-  anonymous storage.
-- **The Streamlit game** (`app.py`, `ui/`) plays the same game from the same engine and uses the same record board file.
+By default `USE_FAKE_AI=true`, so the whole game runs **without any API key**. Level mode never needs an AI at
+all. Endless mode then uses built-in attack scripts, and a simulated chatbot reads your plain English rules.
 
-By default `USE_FAKE_AI=true`, so everything runs **without any API key**. Level mode never needs an AI at all.
-Endless mode then uses built-in attack scripts, and a simulated chatbot reads your plain English rules.
-
-To play Endless mode against a live AI (a real chatbot and a real attacker), create a key in Google AI Studio, put it
-in `.env` as `GEMINI_API_KEY` and set `USE_FAKE_AI=false`, then restart. Keys live only in `.env`, which git ignores.
-Neither interface has a page for typing a key, and no key is ever sent to the browser or printed. Set `ARENA_PORT`
-to serve the browser game on another port.
+To play Endless mode against a live AI (a real chatbot and a real attacker), create a key in Google AI Studio, put it in `.env` as `GEMINI_API_KEY`
+and set `USE_FAKE_AI=false`. Keys live only in `.env`, which git ignores. The game has no page for typing a key
+and never prints one.
 
 ## How to play
 
@@ -115,26 +102,24 @@ best defence is to never give a chatbot a secret it does not need.
 ## Project structure
 
 ```
-index.html      the browser game's page (css/, js/ and data/ are its styles, scripts and content)
-css/ js/ data/  the browser game: ES modules (views, components, the round engine) and its content as JavaScript
-server.py       local server for the browser game: static files and /api/* on top of the Python engine
-app.py          Streamlit entry point, routes between the Streamlit screens
-ui/             Streamlit interface: screens, the shared chat and map playback, the tutorial guide, the SVG
-                System Core map, the stylesheet (theme.py), icons, and data.py (the only file that talks to engine/)
-.streamlit/     Streamlit theme (light and dark)
-engine/         game logic shared by both interfaces: engine/arena/ (worlds, rule cards, scripts, rounds, grading,
-                Endless, live AI helpers), the record board (records.py), the earlier level engine, code judge, save
-                files, optional storage, and call_ai() (every AI call goes through it)
-scenarios/      game content as JSON for the Python engine: the first café scenarios, and scenarios/arena/
-tests/          plain assert tests, `python tests/run_all.py` runs them all (test_front_parity.py checks that
-                data/ and scenarios/arena/ describe the same game)
+app.py          Streamlit entry point, routes between the screens
+ui/             interface: home, levels, play and replay, report, Endless, records, settings, browser
+                saved progress (progress.py),
+                the shared chat and map playback (chat.py), the tutorial guide, the SVG System Core
+                map, the stylesheet (theme.py), the top bar (shell.py), local files (store.py) and
+                data.py (the only file that talks to engine/)
+.streamlit/     Streamlit theme (light theme and accent colour)
+engine/         game logic: engine/arena/ (worlds, rule cards, scripts, rounds, grading, Endless and
+                the live AI helpers), the earlier level engine, code judge, save files, optional
+                storage, and call_ai() (every AI call goes through it)
+scenarios/      game content as JSON: the first café scenarios, and scenarios/arena/ (worlds, rule
+                cards, levels, attack and customer scripts)
+tests/          plain assert tests, `python tests/run_all.py` runs them all
 docs/           plan, build contract (MASTER_PROMPT.md), sample data, supabase.sql, screenshots
-local_data/     (git ignored, created when needed) the record board file shared by both interfaces
 ```
 
 Design rules: the judge is plain code, not AI, so scoring is objective and free. Content is separate from code,
-so adding a level means editing a content file (and keeping `data/` and `scenarios/arena/` in step, which the parity test
-checks). AI replies and player text are shown as plain text, never as HTML.
+so adding a level means editing JSON. AI replies and player text are shown as plain text, never as HTML.
 
 ## Optional anonymous storage and consent
 
@@ -143,7 +128,7 @@ Storage is **off unless you set it up**, and the game works exactly the same wit
 - Create a Supabase project, run `docs/supabase.sql` once in its SQL editor, then put `SUPABASE_URL` and
   `SUPABASE_KEY` in `.env`. Use the publishable (anon) key. It can only insert rows and can never read them.
   Never use a service role key.
-- On the report screen (and at the end of an Endless run), in both interfaces, there is a checkbox, **unticked by default** and asked again for every run:
+- On the report screen (and at the end of an Endless run) there is a checkbox, **unticked by default** and asked again for every run:
   "Share my anonymous results to help research. No name or personal data is saved."
 - Only if it is ticked, one row is stored for that run: the level, the rules you picked (or, in Endless mode,
   the rules you wrote, one row per section), the scores and grade, which zones leaked or refused, and the model name for Endless.

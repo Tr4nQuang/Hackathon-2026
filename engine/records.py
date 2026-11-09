@@ -1,5 +1,5 @@
-"""The record board of Endless runs: a small JSON file on the computer that runs the game, shared by the browser game
-(server.py) and the Streamlit game. One row per player name, the best score kept."""
+"""The record board of Endless runs: a small JSON file on the computer that runs the game.
+One row per player name, the best score kept."""
 
 import json
 import os
