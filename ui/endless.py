@@ -11,12 +11,10 @@ import uuid
 
 import streamlit as st
 
-from ui import chat, common, data, play, progress, records, report, store
+from ui import chat, common, data, play, progress, records, report, shift, store
 
 RULES_BOX_HEIGHT = 170
 SEED_RANGE = 1_000_000
-TICK_SECONDS = 0.5
-REVEAL_SECONDS = {"normal": 1.4, "fast": 0.6, "instant": 0.2}  # how long a reply stays alone before the next visitor
 HOW_IT_WORKS = (
     "Before each shift you get **intel**: what the attackers are after, and what they learned from your last rules.",
     "You write the chatbot's rules in plain English, but they must fit a **word budget that shrinks every shift**. "
@@ -193,17 +191,6 @@ def start_shift() -> None:
         progress.save_run(snapshot(run))
 
 
-def decide(block: bool) -> None:
-    """Block the waiting visitor or let the chatbot answer, then pause briefly so the reply can be read."""
-    run = current()
-    shift = run["shift"]
-    if shift is None or data.endless.shift_pending(shift) is None:
-        return
-    data.endless.shift_step(shift, block=block and shift["blocks_left"] > 0)
-    speed = st.session_state.get("speed", "normal")
-    run.update(deadline=None, reveal_until=time.monotonic() + REVEAL_SECONDS.get(speed, 1.4))
-
-
 def end_shift() -> None:
     """Grade the finished shift, update score and trust, save the run and open the report."""
     state, run = st.session_state, current()
@@ -338,71 +325,9 @@ def brief_screen(run: dict, world: dict) -> None:
         play.chat_waiting(world, WAITING_TEXT)
 
 
-def decision_bar(run: dict, visitor: dict, left: float, when: str) -> None:
-    """Show the waiting visitor's message with the countdown and the two choices, at the top where nothing needs scrolling."""
-    shift, seconds = run["shift"], run["cur"]["spec"]["seconds"]
-    with st.container(key="decision"):
-        message, choice = st.columns([3, 2], gap="medium", vertical_alignment="center")
-        with message:
-            st.caption(f"Visitor · {when} · attacker or customer? Only the message tells you.")
-            st.text(visitor["text"] if visitor["kind"] == "attack" else visitor["q"])
-        with choice:
-            st.progress(max(0.0, min(1.0, left / seconds)), text=f"{left:.0f} s · then the chatbot answers")
-            block, let = st.columns(2)
-            block.button(f"Block · {shift['blocks_left']} left", key="e_block", type="primary", on_click=decide, args=(True,),
-                         disabled=shift["blocks_left"] <= 0, use_container_width=True)
-            let.button("Let it through", key="e_let", on_click=decide, args=(False,), use_container_width=True)
-
-
-def shift_panel(run: dict, number: int, total: int) -> None:
-    """Show the left panel during a shift: the rules in force, blocks left and progress."""
-    shift = run["shift"]
-    with st.container(key="panel_rules_used"):
-        st.subheader("On duty")
-        st.text(run["rules"] or "(no rules: the chatbot will answer anything)")
-        st.caption(f"Visitor {min(number, total)} of {total} · {shift['blocks_left']} block{'' if shift['blocks_left'] == 1 else 's'} left")
-
-
-@st.fragment(run_every=TICK_SECONDS)
-def shift_view() -> None:
-    """The live shift: only this part reruns on every tick, to count down, time out and show each reply."""
-    run = st.session_state.get("endless")
-    if not run or run["status"] != "shift" or run["shift"] is None:
-        return
-    shift, now = run["shift"], time.monotonic()
-    world = data.content.get_world(run["cur"]["world_id"])
-    visitor = data.endless.shift_pending(shift)
-    waiting = now < run["reveal_until"]
-    if visitor is None and not waiting:
-        end_shift()
-        st.rerun()
-    if visitor is not None and not waiting:
-        if run["deadline"] is None:
-            run["deadline"] = now + run["cur"]["spec"]["seconds"]
-        if now >= run["deadline"]:
-            decide(False)
-            visitor, waiting = data.endless.shift_pending(shift), True
-    log, total = shift["round"]["rec"].log, len(run["cur"]["messages"])
-    show_visitor = visitor if not waiting else None
-    when = data.endless.rounds.clock(shift["round"]["index"]) if show_visitor else ""
-    if show_visitor is not None:
-        decision_bar(run, show_visitor, max(0.0, run["deadline"] - now), when)
-    else:
-        with st.container(key="decision_wait"):
-            st.caption("The chatbot is answering..." if visitor is not None or not waiting else "Shift over. Opening the report...")
-    left_col, map_col, chat_col = st.columns([10, 11, 11], gap="medium")
-    with left_col:
-        shift_panel(run, shift["round"]["index"] + 1, total)
-    with map_col:
-        chat.show_map_panel(world, log[-1])
-    with chat_col, st.container(key="sec_chat"):
-        chat.show_chat(world, log, len(log) - 1, "Under attack", False, show_visitor, when)
-        common.scroll_to_latest(f"{len(log)}-{bool(show_visitor)}")
-
-
 def shift_screen(run: dict, world: dict) -> None:
     """Show the live shift."""
-    shift_view()
+    shift.shift_view("endless", end_shift, "shift")
 
 
 def section_summary(run: dict, result: dict) -> str:

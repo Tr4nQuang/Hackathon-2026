@@ -84,7 +84,8 @@ def levels_screen() -> None:
         common.eyebrow(f"Level mode · {total}/{3 * len(levels)} stars", "levels")
         st.header("Defend all three businesses")
         st.write("Clear a level with at least 1 star to unlock the next. Each try draws one of "
-                 f"{data.content.packages_per_level()} script packages, so the attacks change between tries.")
+                 f"{data.content.packages_per_level()} attack packages, so the attacks change between tries. From level 4 you can block visitors, "
+                 "and some levels hide a VIP client.")
     st.html(position_css(len(levels)))
     points, height = path_points(levels)
     with st.container(key="levelpath"):

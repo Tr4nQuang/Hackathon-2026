@@ -9,11 +9,11 @@ from ui.map import build_map_svg
 EXAMPLE_STATE = {"hours": "served", "menu": "served", "student": "refused", "i1": "safe", "pii": "safe",
                  "srv": "breached", "bank": "target", "act": "safe"}
 HERO_NOTE = ("Every business, person and secret is fictional. The tutorial and Level mode run without AI. Endless mode "
-             "uses a live AI when USE_FAKE_AI=false and a Gemini key is set; otherwise it uses built-in attack scripts.")
+             "can use a live AI when USE_FAKE_AI=false and a Gemini key is set; otherwise it uses built-in attack scripts.")
 GRADING_TEXT = ("Security is the share of attacked points you kept. Helpfulness is the share of public questions answered. "
-                "Your overall score is the points you kept and served, minus 14% of the round's points for every ⚡ that "
-                "did no work. Leaks cap the grade whatever the score: an internal leak means 2 stars at most, and leaking personal "
-                "data, money or doing a forbidden action fails the round. The report never says which rules were the extra ones.")
+                "Your overall score is the points you kept and served. Leaks cap the grade whatever the score: an internal leak means "
+                "2 stars at most, and leaking personal data, money or doing a forbidden action fails the round. Turning away "
+                "a VIP client loses the shift.")
 
 
 def mode_card(key: str, eyebrow: str, title: str, text: str, left: str, right: str) -> None:
@@ -34,7 +34,7 @@ def star_title(count: int) -> str:
 def grade_tiles() -> None:
     """Show how a round is graded: Perfect, three star levels and a fail."""
     stars = dict(data.grade.STAR_THRESHOLDS)
-    tiles = [("perfect", "**Perfect**", "100% security, 100% helpfulness, no wasted compute"),
+    tiles = [("perfect", "**Perfect**", "Nothing leaked and every customer served"),
              ("s3", star_title(3), f"Overall score {stars[3]}% or more, and nothing leaked"),
              ("s2", star_title(2), f"Overall score {stars[2]}% or more. An internal leak caps you here"),
              ("s1", star_title(1), f"Overall score {stars[1]}% or more, with security at least {data.grade.PASS_SECURITY}% and "
@@ -96,11 +96,11 @@ def home_screen() -> None:
     first, second, third = st.columns(3, gap="medium")
     top = store.top_score()
     with first:
-        mode_card("tutorial", "Start here", "Tutorial", "One guided round at Polar Bean Café. Learn the System Core map, "
-                  "compute costs and two-way scoring.", "1 script package", "Done ✓" if "tutorial" in state["progress"] else "About 3 minutes")
+        mode_card("tutorial", "Start here", "Tutorial", "One guided shift at Polar Bean Café. Learn the System Core map, "
+                  "intel, writing rules on a word budget and two-way scoring.", "1 attack package", "Done ✓" if "tutorial" in state["progress"] else "About 3 minutes")
     with second:
-        mode_card("levels", "Level mode", f"{len(levels)} levels, 3 worlds", "Pick rule cards using as little compute as you can. "
-                  "Every try brings a new shop and new attack scripts, and rules that do no work cost you stars.",
+        mode_card("levels", "Level mode", f"{len(levels)} levels, 3 worlds", "Twelve authored shifts. Read the intel, write rules on a word budget, "
+                  "then block attackers and spare the VIP clients. Every try brings a new attack package.",
                   "Café · Dealership · University", f"{cleared}/{len(levels)} cleared")
     with third:
         mode_card("endless", "Endless mode · Siege", "How long can you hold?", "Guard a live chat, shift after shift. Your rules "

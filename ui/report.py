@@ -7,7 +7,6 @@ from ui.common import STAR
 
 GREAT_RULES_TIP = "Even great rules can fail. Real businesses should never give their chatbot secrets it does not need."
 CONSENT_TEXT = "Share my anonymous results to help research. No name or personal data is saved."
-LOW_STATS = "Failed on compute: too many rules that did no work."
 
 
 def defense_names(kinds: list[str]) -> str:
@@ -34,19 +33,30 @@ def tally_notes(tally: dict, world: dict, covered: set[str] | None) -> list[dict
     return notes
 
 
-def clean_note(wasted: bool) -> dict:
+def clean_note(wasted: bool = False) -> dict:
     """Return the note for a round with nothing to report."""
     return {"kind": "clean", "chip": "Clean", "text": "No leaks, no turned-away customers" + (", and no wasted compute" if wasted else "") + "."}
 
 
 def report_notes(result: dict, world: dict) -> list[dict]:
-    """Return the notes of a level round. It never says which rules were the unnecessary ones."""
-    notes = tally_notes(result["tally"], world, data.rules.coverage(result["selected"], world))
-    if result["excess"] > 0:
-        lead = "Far more compute than this job needed." if result["excess"] >= 5 else "Some compute did no work."
-        notes.append({"kind": "efficiency", "chip": "Efficiency", "text": f"{lead} It cost you {result['grade']['penalty']} points. "
-                      "Think about which of your rules this attack team really needed."})
-    return notes or [clean_note(result["excess"] == 0)]
+    """Return the notes of a level round: leaks, turned-away customers, a lost VIP, vague rules and your blocks."""
+    notes = tally_notes(result["tally"], world, set(result["cov"]))
+    if result["vip_lost"]:
+        notes.append({"kind": "leak", "chip": "VIP", "text": "A VIP client was turned away. Read the whole message before you block."})
+    elif result["blocked_customers"]:
+        count = result["blocked_customers"]
+        notes.append({"kind": "refusal", "chip": "Your block", "text": f"You blocked {count} real customer{'' if count == 1 else 's'}."})
+    for note in result["notes"]:
+        notes.append({"kind": "efficiency", "chip": "Rules", "text": data.endless.config()["rule_notes"][note]})
+    return notes or [clean_note(False)]
+
+
+def show_goals(result: dict) -> None:
+    """Show the level's goals and which of them were met."""
+    with st.container(key="goals"):
+        st.markdown("**Goals**")
+        for goal in result["objectives"]:
+            st.markdown(f"{'✅' if goal['done'] else '▫️'} {goal['text']}")
 
 
 def show_notes(notes: list[dict]) -> None:
@@ -69,24 +79,26 @@ def summary_text(result: dict, level: dict) -> str:
     grade = result["grade"]
     if grade["key"] == "breach":
         return "The core was breached, so the round ended on the spot. Protect the centre first."
+    if grade["key"] == "vip":
+        return "A VIP client was turned away, so the shift is lost however well the rest went. Not every visitor is an attacker."
     if grade["key"] == "leak":
         return "Sensitive data leaked (personal data, money or a forbidden action), so the round fails however high the score."
     if grade["pass"]:
         capped = " Capped at 2 stars: internal information leaked." if grade.get("capped") else ""
         return ("Final level cleared. All three businesses are defended." if level["id"] == "level_12" else "Level passed.") + capped
-    return LOW_STATS if grade["sec"] >= 50 and grade["help"] >= 30 else "Not enough to pass. Check the notes and the replay, then try again."
+    return "Not enough to pass. Check the notes and the replay, then try again."
 
 
 def show_stats(result: dict) -> None:
-    """Show security, helpfulness, compute and the overall score as four tiles."""
+    """Show security, helpfulness, the words used against the budget, and the overall score as four tiles."""
     grade, score = result["grade"], result["score"]
-    security, helpfulness, compute, overall = st.columns(4)
+    security, helpfulness, words, overall = st.columns(4)
     security.metric("Security", f"{grade['sec']}%")
     security.caption(f"{score['kept']}/{score['at_stake']} pts kept")
     helpfulness.metric("Helpfulness", f"{grade['help']}%")
     helpfulness.caption(f"{score['served']}/{score['asked']} pts")
-    compute.metric("Compute", f"{result['used']}⚡")
-    compute.caption(data.grade.efficiency_label(result["excess"]))
+    words.metric("Words", f"{result['words']}/{result['budget']}")
+    words.caption(f"{result['catches']} blocked by you" if result["blocks_used"] else "no blocks in this level")
     overall.metric("Overall", f"{grade['overall']}%")
     overall.caption(f"{result['points']} points")
 
@@ -105,7 +117,7 @@ def storage_args(result: dict, level: dict) -> dict:
     mode = common.storage_mode(level["id"])
     args = {"mode": mode, "scenario_id": "arena", "level_id": level["id"], "run_id": result["run_id"],
             "session_id": st.session_state["session_id"], "attempt_number": result["attempt"],
-            "result": data.storage_result(result), "grade": data.storage_grade(result), "chosen_rules": result["selected"]}
+            "result": data.storage_result(result), "grade": data.storage_grade(result), "chosen_rules": result["cov"]}
     if mode == "tutorial" and data.get_guide_steps(level):
         args["guide_skipped"] = st.session_state["guide_skipped"]
     return args
@@ -155,6 +167,7 @@ def report_screen() -> None:
             show_badge(result["grade"])
             st.write(summary_text(result, level))
             show_stats(result)
+            show_goals(result)
             show_notes(report_notes(result, world))
             if result["grade"]["key"] == "perfect" or result["grade"]["stars"] == 3:
                 st.info(GREAT_RULES_TIP)

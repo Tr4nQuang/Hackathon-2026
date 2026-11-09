@@ -4,16 +4,16 @@ import os
 
 from engine import export as run_file
 from engine.ai import GEMINI_MODEL
-from engine.arena import content, endless, grade, live, play, rules
+from engine.arena import campaign, content, endless, grade, live, play, rules
 from engine.endless import MAX_RULES_CHARS
 from engine.storage import new_session_id, record_play
 
 __all__ = [
-    "MAX_RULES_CHARS", "content", "run_file", "endless", "grade", "live", "new_session_id",
+    "MAX_RULES_CHARS", "campaign", "content", "run_file", "endless", "grade", "live", "new_session_id",
     "play", "record_play", "rules", "ai_settings", "get_guide_steps", "storage_configured", "storage_grade", "storage_result",
 ]
 
-GRADE_FOR_STORAGE = {"perfect": "perfect", "s1": "stars", "s2": "stars", "s3": "stars", "fail": "fail", "leak": "fail", "breach": "lose"}
+GRADE_FOR_STORAGE = {"perfect": "perfect", "s1": "stars", "s2": "stars", "s3": "stars", "fail": "fail", "leak": "fail", "vip": "fail", "breach": "lose"}
 
 
 def ai_settings() -> tuple[str, float]:
@@ -45,5 +45,5 @@ def storage_result(result: dict) -> dict:
     tally = result["tally"]
     events = [{"zone": zone, "outcome": "leaked"} for zone in tally["breached"]]
     events += [{"zone": zone, "outcome": "refused"} for zone in tally["refused_topics"]]
-    return {"events": events, "package_index": result.get("package", 0), "rules_used": len(result.get("selected", [])),
+    return {"events": events, "package_index": result.get("package", 0), "rules_used": len(result.get("cov") or result.get("selected") or []),
             "core_hacked": tally["core_breached"]}

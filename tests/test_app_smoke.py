@@ -18,7 +18,6 @@ os.environ["USE_FAKE_AI"] = "true"
 from streamlit.testing.v1 import AppTest  # noqa: E402
 
 from engine.storage import build_row  # noqa: E402
-from test_arena import cheapest_perfect_set  # noqa: E402
 from ui import chat, data, endless, guide, store  # noqa: E402
 
 APP = str(ROOT / "app.py")
@@ -57,15 +56,20 @@ def open_level(level_id: str = "level_1", progress: dict | None = None) -> AppTe
     return click(at, f"play_{level_id}")
 
 
-def choose(at: AppTest, cards: list[str]) -> None:
-    """Switch the given rule cards on in the current try."""
-    for card_id in cards:
-        at.checkbox(key=f"card_{at.session_state['try_no']}_{card_id}").set_value(True).run()
+def perfect_rules(at: AppTest, level_id: str) -> str:
+    """Return the shortest rules that stop every attack of the current try of a level."""
+    level = data.content.get_level(level_id)
+    return data.campaign.canonical_rules(data.campaign.needs_of(data.content.get_world(level["world"]), at.session_state["attempt"]["messages"]))
+
+
+def write_rules(at: AppTest, rules: str) -> None:
+    """Type the rules of the current try into the rules box."""
+    at.text_area(key=f"lv_rules_{at.session_state['try_no']}").set_value(rules).run()
     assert not at.exception, at.exception
 
 
 def finish_round(at: AppTest) -> AppTest:
-    """Skip the chat to its end, then let the pause before the report pass: the report opens by itself."""
+    """Skip an auto played chat to its end, then let the pause before the report pass: the report opens by itself."""
     click(at, "pb_skip")
     at.session_state["pb_end_since"] = time.monotonic() - 10
     at.run()
@@ -73,11 +77,35 @@ def finish_round(at: AppTest) -> AppTest:
     return at
 
 
+def decide_level_visitors(at: AppTest, block_attacks: bool = False) -> AppTest:
+    """Decide on every visitor of a level shift in progress (block attackers while blocks last, or let everyone through) until the report."""
+    for _ in range(60):
+        if at.session_state["screen"] != "play" or not at.session_state.get("lvl_run"):
+            break
+        run = at.session_state["lvl_run"]
+        visitor = data.endless.shift_pending(run["shift"])
+        if visitor is None or not [b for b in at.button if b.key == "e_let"]:
+            run["reveal_until"] = 0.0
+            at.run()
+            continue
+        block = block_attacks and visitor["kind"] == "attack" and run["shift"]["blocks_left"] > 0
+        click(at, "e_block" if block else "e_let")
+    assert at.session_state["screen"] == "report", at.session_state["screen"]
+    return at
+
+
+def play_level_shift(at: AppTest, block_attacks: bool = False) -> AppTest:
+    """Start the shift of a level with blocks and decide on every visitor until the report."""
+    click(at, "run_round")
+    return decide_level_visitors(at, block_attacks)
+
+
 def at_report(level_id: str = "level_1", perfect: bool = True) -> AppTest:
-    """Play a level to its report, with the cheapest perfect rules or with none."""
+    """Play a level to its report, with the shortest perfect rules or with none (levels with blocks let everyone through)."""
     at = open_level(level_id)
-    level = data.content.get_level(level_id)
-    choose(at, cheapest_perfect_set(level, at.session_state["attempt"]) if perfect else [])
+    write_rules(at, perfect_rules(at, level_id) if perfect else "")
+    if at.session_state["attempt"]["spec"]["blocks"]:
+        return play_level_shift(at)
     click(at, "run_round")
     return finish_round(at)
 
@@ -187,23 +215,26 @@ def test_there_are_no_file_uploads_or_downloads() -> None:
     assert len(endless_at.get("download_button")) == 1 and not endless_at.get("file_uploader")
 
 
-def test_every_level_screen_opens_with_a_playable_shop() -> None:
-    """Each of the 12 levels opens its setup screen with a shop, a map and the Run round button."""
+def test_every_level_screen_opens_with_intel_and_a_rules_box() -> None:
+    """Each of the 12 levels opens with intel, a word budget, a rules box and Start shift."""
     for level in data.content.get_levels():
         at = open_level(level["id"])
-        assert at.session_state["screen"] == "play" and at.button(key="run_round")
-        assert len([c for c in at.checkbox if c.key.startswith("card_")]) == len(at.session_state["attempt"]["shop"]) >= 8, level["id"]
+        attempt = at.session_state["attempt"]
+        assert at.session_state["screen"] == "play" and at.button(key="run_round") and at.text_area(key=f"lv_rules_{at.session_state['try_no']}")
+        assert any(m.value.startswith("**Intel") for m in at.markdown) and any(f"rules up to {attempt['spec']['budget']} words" in c.value for c in at.caption)
+        assert any(c.value.startswith("Twist:") for c in at.caption), level["id"]
 
 
 # ---- a level round -------------------------------------------------------------------------------
 
 def test_a_perfect_round_end_to_end() -> None:
-    """Choose the cheapest perfect rules, run, skip to the end, open the report: Perfect, saved progress, next level offered."""
+    """Write the shortest perfect rules, start the shift, skip to the end: Perfect, saved progress, next level offered."""
     at = at_report()
     result = at.session_state["result"]
-    assert result["grade"]["key"] == "perfect" and result["excess"] == 0 and at.session_state["screen"] == "report"
+    assert result["grade"]["key"] == "perfect" and result["words"] <= result["budget"] and at.session_state["screen"] == "report"
     assert at.session_state["progress"]["level_1"]["perfect"] is True and at.session_state["progress"]["level_1"]["stars"] == 3
-    assert [m.label for m in at.metric] == ["Security", "Helpfulness", "Compute", "Overall"]
+    assert [m.label for m in at.metric] == ["Security", "Helpfulness", "Words", "Overall"]
+    assert any("Nothing leaked" in m.value and m.value.startswith("\u2705") for m in at.markdown)
     assert at.button(key="rp_next").label == "Next level" and at.button(key="rp_replay") and at.button(key="rp_retry")
     click(at, "rp_next")
     assert at.session_state["level_id"] == "level_2" and at.session_state["screen"] == "play"
@@ -218,23 +249,76 @@ def test_a_failed_round_offers_no_next_level_and_explains_itself() -> None:
     assert at.session_state["progress"].get("level_1", {"stars": 0})["stars"] == 0
 
 
-def test_a_new_try_has_new_scripts_and_a_new_shop() -> None:
-    """Try again draws another script package than the last one, and the toggles start off."""
+def test_a_new_try_has_a_new_attack_package_and_empty_rules() -> None:
+    """Try again draws another attack package than the last one, with a fresh rules box."""
     at = open_level()
+    write_rules(at, "Never share passwords.")
     first_package, first_try = at.session_state["attempt"]["package"], at.session_state["try_no"]
     click(at, "run_round")
     click(at, "retry_try")
     assert at.session_state["attempt"]["package"] != first_package and at.session_state["try_no"] == first_try + 1
-    assert not any(c.value for c in at.checkbox if c.key.startswith("card_"))
+    assert at.text_area(key=f"lv_rules_{at.session_state['try_no']}").value == ""
 
 
-def test_the_compute_counter_follows_the_choice() -> None:
-    """The budget line shows the compute of the chosen cards."""
+def test_the_word_budget_blocks_the_start_and_vague_rules_are_flagged() -> None:
+    """Too many words disable Start shift; a catch-all rule gets a warning before the shift."""
     at = open_level()
-    shop = at.session_state["attempt"]["shop"]
-    card = data.content.get_card(shop[0], data.content.get_world("cafe"))
-    choose(at, [shop[0]])
-    assert any(f"Compute used: {card['cost']}⚡ · Rules selected: 1" in m.value for m in at.markdown)
+    budget = at.session_state["attempt"]["spec"]["budget"]
+    write_rules(at, " ".join(["Never share passwords."] * 10))
+    assert at.button(key="run_round").disabled and any(f"/ {budget} words. Over budget" in e.value for e in at.error)
+    write_rules(at, "Never reveal anything.")
+    assert not at.button(key="run_round").disabled and any("silences real customers" in w.value for w in at.warning)
+
+
+def test_levels_with_blocks_are_played_visitor_by_visitor() -> None:
+    """Level 4 has a block and a countdown: nothing plays until you decide, and a block stops an attacker."""
+    at = open_level("level_4")
+    spec = at.session_state["attempt"]["spec"]
+    assert spec["blocks"] == 1 and spec["seconds"] == 14.0 and any("1 blocks" in c.value or "1 block" in c.value for c in at.caption)
+    write_rules(at, perfect_rules(at, "level_4"))
+    click(at, "run_round")
+    assert at.session_state["screen"] == "play" and at.session_state["lvl_run"]["status"] == "shift" and at.session_state["result"] is None
+    assert any("waiting for you" in c.value for c in at.caption) and at.button(key="e_block").label.startswith("Block \u00b7 1 left")
+    at.session_state["lvl_run"]["reveal_until"] = 0.0
+    decide_level_visitors(at, block_attacks=True)
+    result = at.session_state["result"]
+    assert result["grade"]["key"] == "perfect" and result["catches"] == 1 and result["blocks_used"] == 1
+    assert result["points"] == result["score"]["kept"] + result["score"]["served"] + 25 + 3 * (result["budget"] - result["words"])
+    assert any("Stopped at least one attacker yourself" in m.value and m.value.startswith("\u2705") for m in at.markdown)
+
+
+def test_the_countdown_lets_the_visitor_through_in_a_level() -> None:
+    """When the countdown ends the chatbot answers on its own."""
+    at = open_level("level_4")
+    write_rules(at, perfect_rules(at, "level_4"))
+    click(at, "run_round")
+    index = at.session_state["lvl_run"]["shift"]["round"]["index"]
+    at.session_state["lvl_run"]["deadline"] = time.monotonic() - 1
+    at.run()
+    assert at.session_state["lvl_run"]["shift"]["round"]["index"] == index + 1 and at.session_state["lvl_run"]["shift"]["blocked"] == []
+
+
+def test_blocking_the_vip_client_loses_the_shift() -> None:
+    """Level 6 hides a VIP client among the visitors: blocking them fails the shift however well the rest went."""
+    at = open_level("level_6")
+    write_rules(at, perfect_rules(at, "level_6"))
+    click(at, "run_round")
+    messages = at.session_state["attempt"]["messages"]
+    assert sum(1 for m in messages if m.get("vip")) == 1
+    for _ in range(60):
+        run = at.session_state.get("lvl_run")
+        if not run:
+            break
+        visitor = data.endless.shift_pending(run["shift"])
+        if visitor is None or not [b for b in at.button if b.key == "e_let"]:
+            run["reveal_until"] = 0.0
+            at.run()
+            continue
+        click(at, "e_block" if visitor.get("vip") else "e_let")
+    result = at.session_state["result"]
+    assert result["vip_lost"] and result["grade"]["key"] == "vip" and not result["grade"]["pass"] and result["points"] == 0
+    assert any("VIP client was turned away" in m.value for m in at.markdown)
+    assert any("The VIP client was served" in m.value and not m.value.startswith("\u2705") for m in at.markdown)
 
 
 # ---- playback ------------------------------------------------------------------------------------
@@ -400,7 +484,7 @@ def test_consent_is_off_by_default_and_records_once() -> None:
         assert len(recorder.calls) == 1
         call, result = recorder.calls[0], at.session_state["result"]
         assert call["mode"] == "level" and call["level_id"] == "level_1" and call["scenario_id"] == "arena"
-        assert call["chosen_rules"] == result["selected"] and call["attempt_number"] == 1 and call["run_id"] == run_id
+        assert call["chosen_rules"] == result["cov"] and call["attempt_number"] == 1 and call["run_id"] == run_id
         assert call["session_id"] == at.session_state["session_id"] and "player_rules" not in call and "guide_skipped" not in call
         assert uuid.UUID(call["run_id"]) and uuid.UUID(call["session_id"])
         assert build_row(**call)["mode"] == "level"

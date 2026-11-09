@@ -20,7 +20,7 @@ SCREENS = {
 
 def init_state() -> None:
     """Set the session defaults once."""
-    defaults = {"screen": "home", "level_id": None, "attempt": None, "result": None, "try_no": 0, "last_package": {},
+    defaults = {"screen": "home", "level_id": None, "attempt": None, "result": None, "lvl_run": None, "try_no": 0, "last_package": {},
                 "progress": {}, "endless_best": {}, "attempts": {}, "speed": "normal", "endless": None, "saved_run": None, "confirm_reset": False,
                 "player_name": "",
                 "pb_step": 0, "pb_playing": False, "pb_last": 0.0,
