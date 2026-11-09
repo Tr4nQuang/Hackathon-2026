@@ -149,13 +149,15 @@ def intel_text(world: dict, spec: dict, plan: dict) -> dict:
     techniques = list(dict.fromkeys(attack["type"] for attack in plan["attacks"]))
     method = ", ".join(config()["technique_name"][name] for name in techniques)
     level = spec["intel"]
-    if level == "partial" and len(named) > 1:
+    if level == "none":
+        hint = texts["none"]
+    elif level == "partial" and len(named) > 1:
         hint = texts["partial"].format(first=named[0])
     else:
         hint = texts["full" if level == "full" else "targets"].format(targets=", and ".join(named), techniques=method)
     labels = rules_data()["defense_label"]
     recon = texts["recon"].format(gaps=", ".join(labels[gap] for gap in plan["exploited"])) if plan["exploited"] else ""
-    revealed = plan["targets"] if level != "partial" else plan["targets"][:1]
+    revealed = [] if level == "none" else plan["targets"] if level != "partial" else plan["targets"][:1]
     return {"hint": hint, "recon": recon, "revealed": revealed}
 
 

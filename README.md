@@ -6,8 +6,8 @@ natHacks 2026, Standard Division, Defense and Security theme.
 support) each run a chatbot, and attackers are trying to trick it into leaking what it knows or doing what it
 must never do. You choose or write the rules that protect the chatbot, then watch the attackers and the real
 customers talk to it while a map of the business, the **System Core**, changes message by message. You score
-for every secret kept (**security**) and for every real customer still served (**helpfulness**), and every rule
-costs compute, so "refuse everything" and "switch on everything" never win.
+for every secret kept (**security**) and for every real customer still served (**helpfulness**), and your
+rules must fit a word budget, so "refuse everything" and "guard everything" never win.
 
 ## Why this matters
 
@@ -65,18 +65,24 @@ it is worth, and a breached core ends the round on the spot. A dark zone means a
 hatched zone means a real customer was **turned away**, and a green or ticked zone means it was kept or served.
 The chat and the map change together, message by message.
 
-**Tutorial and Level mode** are scripted, fast and free.
-1. Read the attacker's goal and style (the hint at what they will try).
-2. Tick rule cards in the **Rule shop**. Each rule costs compute (⚡). Some cards are bundles that cost less
-   than the single rules they replace, a few shut a whole topic (which turns real customers away), and some do
-   nothing for this round.
-3. Press **Run round**. Every try draws one of four script packages and a new shop, so you cannot memorise one.
-4. Watch the chat in its phone-style window (Pause, step back and forward, Skip to the end, 1x/2x/4x speed, a
-   slider and a timeline of verdicts). When the last message is in, the report opens by itself: security, helpfulness, compute, the overall score and notes on every leak
-   and every customer turned away. It never tells you which of your rules were the unnecessary ones.
+**Tutorial and Level mode: a campaign of live shifts.** Every level is an authored shift at one business, with its
+own twist, and the 12 levels teach the game in order. The rules box, intel and word budget work as in Endless (below).
+1. Read the **intel**: the attacker's goal and style, plus a line on what they are after and how. Later levels give less.
+2. Write plain English **rules** in the box. They must fit the level's word budget, which is only a little above the
+   shortest rules that stop everything, so you must choose; every unused word is worth 3 points. Every try draws one
+   of four attack packages, so you cannot memorise one.
+3. Press **Start shift**. Levels 1 to 3 play out by themselves in the phone-style chat (Pause, step, Skip, speed, a
+   slider and a timeline of verdicts). From level 4 the visitors arrive one at a time and you **Block** or **Let it
+   through** before a countdown ends (1 to 3 blocks; the countdown tightens). Each attacker you block earns 25 points.
+4. Twists: from level 6 some levels hide a **VIP client** among the visitors, and turning them away fails the shift;
+   the last levels give only part of the intel and the shortest budgets.
+5. The report opens by itself: security, helpfulness, words used, points, the stars, a checklist of the level's goals
+   and notes on every leak, customer turned away and weak rule. It never tells you what to write.
 
-The tutorial has a 10 step guide (restart it with the Help button). A level opens the next one when you earn at
-least one star. There are 12 levels over the three businesses.
+The tutorial has a 10 step guide (restart it with the Help button) that teaches intel, rules and the shift on a
+level with no blocks and no countdown. A level opens the next one when you earn at least one star. There are 12
+levels over the three businesses. Points in a level: secret points kept + public points served + 25 per block that
+caught an attacker + 3 per unused word, and 0 if the shift fails.
 
 **Endless mode: Siege** ("How long can you hold?") is a live shift at the chatbot, again and again, each one harder.
 1. **Intel.** Before each shift you learn what the attackers are after (and, early on, how). The targets flash red on
@@ -102,11 +108,11 @@ simulated chatbot reads your rules. With one, an attacker AI is briefed on its t
 must be and **your current rules**, and writes the attacks around them; a real chatbot answers. Finished runs can be saved
 to the record board on your computer. All the tuning is in `scenarios/arena/endless.json`.
 
-**Grades.** *Perfect* means every secret kept, every customer served and no compute wasted. Otherwise the overall
+**Grades.** *Perfect* means every secret kept and every customer served. Otherwise the overall
 score gives 3 stars at 85%, 2 stars at 70% and 1 star at 50%, as long as security is at least 50% and
-helpfulness at least 30%. Every ⚡ that did no work costs 14% of the round's points. **Leaks cap the grade whatever
+helpfulness at least 30%. **Leaks cap the grade whatever
 the score**: an internal leak means 2 stars at most, leaking personal data or money, or doing a forbidden action, fails
-the round, and a breached core is an instant loss.
+the round, and a breached core is an instant loss. In a level, turning a VIP client away fails the shift too.
 
 **Progress and continuing later.** Level stars, best scores and your best points for each Endless shift are saved
 automatically, only in this browser on this computer, and never sent anywhere. An Endless run in progress is kept too
@@ -143,7 +149,7 @@ ui/             interface: home, levels, play and replay, report, Endless, recor
                 map, the stylesheet (theme.py), the top bar (shell.py), local files (store.py) and
                 data.py (the only file that talks to engine/)
 .streamlit/     Streamlit theme (light theme and accent colour)
-engine/         game logic: engine/arena/ (worlds, rule cards, scripts, rounds, grading, Endless and
+engine/         game logic: engine/arena/ (worlds, scripts, rounds, grading, campaign levels, Endless and
                 the live AI helpers), the earlier level engine, code judge, save files, optional
                 storage, and call_ai() (every AI call goes through it)
 scenarios/      game content as JSON: the first café scenarios, and scenarios/arena/ (worlds, rule

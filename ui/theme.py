@@ -186,6 +186,8 @@ PLAY = """
 .st-key-decision [data-testid="stCaptionContainer"] p { color: var(--warn) !important; font-weight: 700; }
 .st-key-decision_wait { min-height: 5.6rem; justify-content: center; margin-bottom: .6rem; }
 .st-key-decision [data-testid="stProgress"] > div > div > div > div { background: var(--warn); }
+[class*="st-key-goals"] { background: var(--surface-2); border-radius: 10px; padding: .6rem .9rem; gap: .2rem; }
+[class*="st-key-goals"] p { margin: 0; }
 .st-key-intel { background: var(--attack-soft); border-radius: 10px; padding: .7rem 1rem; gap: .35rem; }
 .st-key-intel p { margin: 0; }
 .st-key-trust [data-testid="stProgress"] > div > div > div > div { background: var(--good); }

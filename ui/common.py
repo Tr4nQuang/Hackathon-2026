@@ -103,17 +103,17 @@ def record_progress(level: dict, result: dict) -> None:
 
 
 def begin_try(level_id: str) -> None:
-    """Start a try of a level: draw a script package (not the last one) and build its shop, then open the play screen."""
+    """Start a try of a level: draw an attack package (not the last one) and build its shift, then open the play screen."""
     state = st.session_state
     level = data.content.get_level(level_id)
-    package = data.play.pick_package(level, state["last_package"].get(level_id))
+    package = data.campaign.pick_package(level, state["last_package"].get(level_id))
     state["last_package"][level_id] = package
-    state.update(level_id=level_id, attempt=data.play.new_try(level, package), result=None,
+    state.update(level_id=level_id, attempt=data.campaign.new_try(level, package), result=None, lvl_run=None,
                  try_no=state["try_no"] + 1, pb_step=0, pb_playing=False, screen="play")
 
 
 def retry_level() -> None:
-    """Try the same level again with new scripts and a new shop."""
+    """Try the same level again with a new attack package."""
     begin_try(st.session_state["level_id"])
 
 

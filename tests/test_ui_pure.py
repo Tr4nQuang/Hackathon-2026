@@ -16,7 +16,6 @@ sys.path.insert(0, str(ROOT))
 os.environ["USE_FAKE_AI"] = "true"
 
 from engine.storage import build_row  # noqa: E402
-from test_arena import cheapest_perfect_set  # noqa: E402
 from ui import data, endless, icons, levels, records, report, settings, store  # noqa: E402
 from ui.map import STATES, build_map_svg, legend_svg, timeline_svg  # noqa: E402
 
@@ -24,10 +23,12 @@ LEVEL = data.content.get_level("level_1")
 WORLD = data.content.get_world(LEVEL["world"])
 
 
-def played(selected: list[str] | None = None, level: dict = LEVEL) -> dict:
-    """Play a level round the way the screen does, with the cheapest perfect rules unless others are given."""
-    attempt = data.play.new_try(level, 0)
-    return data.play.play_level(level, attempt, cheapest_perfect_set(level, attempt) if selected is None else selected)
+def played(rules: str | None = None, level: dict = LEVEL) -> dict:
+    """Play a level round the way the screen does, with the shortest perfect rules unless others are given."""
+    attempt = data.campaign.new_try(level, 0)
+    world = data.content.get_world(level["world"])
+    return data.campaign.play_level(level, attempt, data.campaign.canonical_rules(data.campaign.needs_of(world, attempt["messages"]))
+                                    if rules is None else rules)
 
 
 # ---- map -----------------------------------------------------------------------------------------
@@ -176,17 +177,19 @@ def test_a_level_bubble_looks_like_its_state() -> None:
 
 def test_notes_say_what_got_through_and_who_was_turned_away() -> None:
     """With no rules the notes list leaks and refusals; with perfect rules there is one Clean note."""
-    bare = played([])
+    bare = played("")
     kinds = {note["kind"] for note in report.report_notes(bare, WORLD)}
-    assert "leak" in kinds and "efficiency" not in kinds
+    assert "leak" in kinds
     assert any("Nothing in your rules covered" in note["text"] for note in report.report_notes(bare, WORLD))
     clean = report.report_notes(played(), WORLD)
-    assert [note["kind"] for note in clean] == ["clean"] and "no wasted compute" in clean[0]["text"]
+    assert [note["kind"] for note in clean] == ["clean"]
+    vague = report.report_notes(played("Never reveal anything."), WORLD)
+    assert any(note["chip"] == "Rules" and "silences real customers" in note["text"] for note in vague)
 
 
 def test_notes_never_name_a_missing_defense_when_a_live_ai_read_the_rules() -> None:
     """Without a reading of the rules (covered is None) a leak is reported but no defense is blamed."""
-    bare = played([])
+    bare = played("")
     notes = report.tally_notes(bare["tally"], WORLD, None)
     assert notes and not any("Nothing in your rules" in note["text"] for note in notes)
 
@@ -275,6 +278,18 @@ def test_settings_speeds_and_no_ai_panel() -> None:
     """The speeds are the three of the original, and the AI connection panel is gone."""
     assert settings.SPEEDS == ("normal", "fast", "instant")
     assert not hasattr(settings, "AI_HELP") and not hasattr(settings, "connection_panel")
+
+
+def test_a_lost_vip_shift_can_be_stored_as_a_failed_level() -> None:
+    """Turning the VIP client away stores as a fail, so saving and consent never choke on the "vip" grade."""
+    level = data.content.get_level("level_6")
+    attempt = data.campaign.new_try(level, 0)
+    world = data.content.get_world(level["world"])
+    rules_text = data.campaign.canonical_rules(data.campaign.needs_of(world, attempt["messages"]))
+    vips = frozenset(i for i, m in enumerate(attempt["messages"]) if m.get("vip"))
+    result = data.campaign.play_level(level, attempt, rules_text, blocked=vips)
+    assert result["grade"]["key"] == "vip" and data.storage_grade(result)["grade"] == "fail"
+    assert isinstance(data.storage_result(result)["events"], list)
 
 
 if __name__ == "__main__":
