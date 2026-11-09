@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from ui import common, data, progress, store
+from ui import common, data, endless, progress, store
 from ui.common import STAR
 from ui.map import build_map_svg
 
@@ -51,6 +51,11 @@ def continue_panel(cleared: int, total: int) -> None:
     stars = sum(row["stars"] for row in state["progress"].values())
     st.button(f"Continue · {cleared}/{total} levels · {stars} {STAR}", type="primary", key="home_continue",
               on_click=common.goto, args=("levels",), use_container_width=True)
+    saved = state.get("saved_run")
+    if saved:
+        st.button(f"Continue your Endless run · section {saved['section']} · {saved['score']} points" if not saved["over"] else
+                  f"See your last Endless run · {saved['score']} points", key="home_resume_run", on_click=endless.resume_run,
+                  use_container_width=True)
     if sections:
         st.caption(f"Endless saved: Score {score} · Cleared {sections}")
     if not state.get("home_confirm_reset"):

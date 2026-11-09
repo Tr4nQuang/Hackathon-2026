@@ -174,7 +174,7 @@ def test_levels_are_numbered_bubbles_with_stars_below() -> None:
 
 
 def test_there_are_no_file_uploads_or_downloads() -> None:
-    """The game has no save file buttons and no upload boxes on any screen."""
+    """The game has no save file buttons and no upload boxes on any screen. The only download is the run file, after an Endless run."""
     at = new_app()
     for place in ("home", "levels", "endless", "records", "settings"):
         click(at, f"nav_{place}")
@@ -182,6 +182,11 @@ def test_there_are_no_file_uploads_or_downloads() -> None:
     report = at_report()
     assert not report.get("file_uploader") and not report.get("download_button")
     assert not [b for b in report.button if b.key in ("rp_save", "load_report")]
+    endless_at = start_endless()
+    play_section(endless_at)
+    assert not endless_at.get("download_button")  # not while the run goes on
+    end_run(endless_at)
+    assert len(endless_at.get("download_button")) == 1 and not endless_at.get("file_uploader")
 
 
 def test_every_level_screen_opens_with_a_playable_shop() -> None:
@@ -642,6 +647,83 @@ def test_endless_without_live_ai_has_no_wait() -> None:
     play_section(at)
     click(at, "e_next")
     assert not at.button(key="e_run").disabled and not any("Next run available" in c.value for c in at.caption)
+
+
+def after_closing(saved: dict | None, **more: object) -> AppTest:
+    """Return a new app (the game opened again) whose browser gave back the saved Endless run."""
+    at = AppTest.from_file(APP, default_timeout=60)
+    seed(at, saved_run=saved, **more)
+    return at.run()
+
+
+def test_a_run_in_progress_is_kept_and_continues_after_closing() -> None:
+    """After a section the run is kept; opening the game again offers Continue, which resumes at the next section."""
+    at = start_endless()
+    assert at.session_state["saved_run"] is None  # nothing played yet
+    play_section(at)
+    saved = at.session_state["saved_run"]
+    assert (saved["section"], saved["passed"], saved["over"], saved["rules"]) == (2, 1, False, STRONG_RULES) and saved["score"] > 0
+    assert len(saved["history"]) == 1 and saved["history"][0]["row"]["rules_text"] == STRONG_RULES
+    fresh = after_closing(saved)
+    assert fresh.session_state["screen"] == "home" and "section 2" in fresh.button(key="home_resume_run").label
+    click(fresh, "home_resume_run")
+    run = fresh.session_state["endless"]
+    assert fresh.session_state["screen"] == "endless" and run["status"] == "brief" and run["section"] == 2 and run["score"] == saved["score"]
+    assert run["run_id"] == saved["run_id"] and fresh.text_area(key="e_rules").value == STRONG_RULES
+    assert any("Section 2" in h.value for h in fresh.header) and any(f"Score {saved['score']} · Cleared 1" in c.value for c in fresh.caption)
+    play_section(fresh)
+    assert len(fresh.session_state["endless"]["history"]) == 2 and fresh.session_state["saved_run"]["section"] in (2, 3)
+    end_run(fresh)
+    rows = endless.run_rows(fresh.session_state["endless"])
+    assert [int(r["section"]) if isinstance(r["section"], str) else r["section"] for r in rows] == [1, 2] and {r["run_id"] for r in rows} == {saved["run_id"]}
+    assert fresh.session_state["saved_run"]["over"] is True and len(fresh.get("download_button")) == 1
+
+
+def test_the_lobby_offers_the_run_too_and_a_new_run_can_still_start() -> None:
+    """The Endless lobby has Continue next to Start a new run; starting new leaves the saved one until the first section is played."""
+    at = start_endless()
+    play_section(at)
+    saved = at.session_state["saved_run"]
+    fresh = after_closing(saved)
+    click(fresh, "nav_endless")
+    assert "section 2" in fresh.button(key="e_resume").label and fresh.button(key="e_start").label == "Start a new run"
+    click(fresh, "e_start")
+    assert fresh.session_state["endless"]["section"] == 1 and fresh.session_state["endless"]["score"] == 0
+    assert fresh.session_state["saved_run"] == saved
+
+
+def test_a_failed_run_is_kept_as_over_and_its_file_can_still_be_downloaded() -> None:
+    """Closing at a failed section keeps the run as over: opening it shows the result, with the run file."""
+    at = start_endless("")
+    play_section(at)
+    saved = at.session_state["saved_run"]
+    assert saved["over"] is True and saved["section"] == 1 and saved["score"] == 0
+    fresh = after_closing(saved)
+    assert "last Endless run" in fresh.button(key="home_resume_run").label
+    click(fresh, "home_resume_run")
+    assert fresh.session_state["endless"]["status"] == "over" and any("0 points" in h.value for h in fresh.header)
+    assert len(fresh.get("download_button")) == 1 and not [b for b in fresh.button if b.key == "e_last_replay"]  # no replay: the chat was not kept
+
+
+def test_the_run_file_holds_every_section_and_hides_contact_details() -> None:
+    """The rows of a run have the file's columns; contact details typed into the rules are removed from the file."""
+    at = start_endless("Mail me at ann@example.com. Never share any password.")
+    play_section(at)
+    row = at.session_state["endless"]["history"][0]["row"]
+    assert set(row) == set(data.run_file.COLUMNS) and row["rules_redacted"] is True and "@" not in row["rules_text"]
+    assert row["session_id"] == at.session_state["session_id"] and row["run_id"] == at.session_state["endless"]["run_id"]
+    text = data.run_file.csv_text(endless.run_rows(at.session_state["endless"]))
+    assert "ann@example.com" not in text and text.startswith(data.run_file.BOM)
+
+
+def test_start_over_forgets_the_saved_run_too() -> None:
+    """Start over on Home clears the saved Endless run along with the progress."""
+    at = start_endless()
+    play_section(at)
+    fresh = after_closing(at.session_state["saved_run"])
+    click(fresh, "home_start_over")
+    click(fresh, "home_reset_yes")
+    assert fresh.session_state["saved_run"] is None and not [b for b in fresh.button if b.key == "home_resume_run"]
 
 
 # ---- records and settings ------------------------------------------------------------------------

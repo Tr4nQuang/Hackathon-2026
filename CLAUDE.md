@@ -14,7 +14,7 @@ attacks AND for still serving real customers, so "refuse everything" never wins.
 - Do not change the contract without telling the whole team first.
 
 ## Folder ownership
-- Person A (Dong): `engine/`, `scenarios/`, `tests/`
+- Person A (Dong): `engine/`, `scenarios/`, `tests/`, `tools/`
 - Person B (James): `app.py`, `ui/`, `README.md`, `docs/`
 
 ## Working together
