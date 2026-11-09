@@ -24,7 +24,7 @@ def init_state() -> None:
                 "progress": {}, "attempts": {}, "speed": "normal", "endless": None, "confirm_reset": False,
                 "player_name": "",
                 "pb_step": 0, "pb_playing": False, "pb_last": 0.0,
-                "replay_log": None, "replay_world": None, "replay_back": "home", "replay_loaded": False,
+                "replay_log": None, "replay_world": None, "replay_back": "home",
                 "guide_index": 0, "guide_done": False, "guide_skipped": False}
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)

@@ -1,16 +1,15 @@
-"""Game settings: chat speed, level progress (reset, export, import) and the AI and storage status."""
+"""Game settings: chat speed, resetting level progress, and the AI and storage status."""
 
 import streamlit as st
 
-from ui import common, data, store
+from ui import common, data
 
 SPEEDS = ("normal", "fast", "instant")
 AI_HELP = ("The API key is never typed into the game. It is read from the .env file on the computer that runs the game, "
            "and that file is never committed. To switch on live AI, copy .env.example to .env, set USE_FAKE_AI=false, "
            "add your own GEMINI_API_KEY and restart the game.")
 STORAGE_HELP = "Anonymous results are only stored when you tick the box on a report, and only if SUPABASE_URL and SUPABASE_KEY are set in .env."
-PROGRESS_NOTE = ("Level stars and best scores last until you close this tab. Export them to keep them, "
-                 "and import the file next time.")
+PROGRESS_NOTE = "Level stars and best scores last until you close this tab."
 
 
 def set_speed() -> None:
@@ -33,22 +32,6 @@ def reset_progress() -> None:
     st.session_state.update(progress={}, confirm_reset=False, last_package={})
 
 
-def import_progress() -> None:
-    """Read the uploaded progress file and merge it into this session's progress; show a message if it is not usable."""
-    state = st.session_state
-    uploaded = state.get("import_progress")
-    if uploaded is None:
-        return
-    level_ids = [level["id"] for level in data.content.get_levels()]
-    try:
-        loaded = store.progress_from_json(uploaded.getvalue().decode("utf-8"), level_ids)
-    except (ValueError, UnicodeDecodeError) as error:
-        state["import_note"] = ("error", str(error))
-        return
-    state["progress"] = store.merge_progress(state["progress"], loaded)
-    state["import_note"] = ("ok", f"Imported progress for {len(loaded)} level{'s' if len(loaded) != 1 else ''}. The better result of each level was kept.")
-
-
 def speed_panel() -> None:
     """Show the chat speed choice."""
     with st.container(key="panel_speed"):
@@ -59,7 +42,7 @@ def speed_panel() -> None:
 
 
 def progress_panel() -> None:
-    """Show reset, export and import of the level progress."""
+    """Show the reset of the level progress (it asks first)."""
     state = st.session_state
     with st.container(key="panel_progress"):
         st.subheader("Progress")
@@ -70,16 +53,8 @@ def progress_panel() -> None:
             erase.button("Erase progress", key="set_erase", on_click=reset_progress)
             keep.button("Cancel", key="set_cancel", on_click=cancel_reset)
         else:
-            reset, export, _ = st.columns([2, 2, 5])
+            reset, _ = st.columns([2, 7])
             reset.button("Reset level progress", key="set_reset", on_click=ask_reset)
-            export.download_button("Export progress", data=store.progress_to_json(state["progress"]), file_name="chatbot-defense-progress.json",
-                                   mime="application/json", key="set_export")
-        st.file_uploader("Import progress", type="json", key="import_progress", on_change=import_progress)
-        kind, message = state.get("import_note", (None, ""))
-        if kind == "error":
-            st.error(message)
-        elif kind == "ok":
-            st.success(message)
 
 
 def connection_panel() -> None:

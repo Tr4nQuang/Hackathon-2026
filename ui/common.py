@@ -1,6 +1,7 @@
 """Small helpers shared by all screens: navigation, progress, starting a try and a few page scripts."""
 
 import time
+import uuid
 
 import streamlit as st
 
@@ -134,6 +135,11 @@ def next_level_id(level_id: str) -> str | None:
 def storage_mode(level_id: str) -> str:
     """Return the storage mode of a level run: tutorial or level."""
     return "tutorial" if level_id == "tutorial" else "level"
+
+
+def new_run_id() -> str:
+    """Return a new id for a finished round."""
+    return str(uuid.uuid4())
 
 
 def start_playback() -> None:

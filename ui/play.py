@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from ui import chat, common, data, guide, saves
+from ui import chat, common, data, guide
 
 PACKAGE_LETTERS = "ABCD"
 SHOP_NOTE = ("Each rule costs compute (⚡). Rules that do no work lower your grade, "
@@ -28,7 +28,7 @@ def run_round() -> None:
     level = data.content.get_level(state["level_id"])
     result = data.play.play_level(level, state["attempt"], selected_cards(state["attempt"], state["try_no"]))
     state["attempts"][level["id"]] = state["attempts"].get(level["id"], 0) + 1
-    result.update(run_id=saves.new_run_id(), attempt=state["attempts"][level["id"]], recorded=False, saved=False)
+    result.update(run_id=common.new_run_id(), attempt=state["attempts"][level["id"]], recorded=False, saved=False)
     state["result"] = result
     common.record_progress(level, result)
     common.start_playback()
@@ -163,8 +163,6 @@ def replay_panel(world: dict):
         with st.container(key="panel_rules_used"):
             st.subheader("Replay")
             st.write(f"Watch the core of {world['name']} change, message by message. Step, skip or drag the slider.")
-            if st.session_state.get("replay_loaded"):
-                st.info(saves.LOADED_NOTICE)
             back = "Back to report" if st.session_state["replay_back"] == "report" else (
                 "Back to the section report" if st.session_state["replay_back"] == "endless" else "Back")
             if st.button(back, key="replay_back_btn", use_container_width=True):

@@ -1,8 +1,8 @@
-"""The round report: grade, scores, what got through, what to do next. Also Save my game, Load my game and consent."""
+"""The round report: grade, scores, what got through, what to do next, and the consent box."""
 
 import streamlit as st
 
-from ui import common, data, guide, saves
+from ui import common, data, guide
 from ui.common import STAR
 
 GREAT_RULES_TIP = "Even great rules can fail. Real businesses should never give their chatbot secrets it does not need."
@@ -92,7 +92,7 @@ def watch_replay() -> None:
     """Open the replay of this round."""
     state = st.session_state
     result = state["result"]
-    state.update(replay_log=result["log"], replay_world=result["world_id"], replay_back="report", replay_loaded=False)
+    state.update(replay_log=result["log"], replay_world=result["world_id"], replay_back="report")
     common.start_playback()
     common.goto("replay")
 
@@ -157,9 +157,3 @@ def report_screen() -> None:
                 st.info(GREAT_RULES_TIP)
         actions(result, level)
         consent_box(result, level)
-        save, load = st.columns(2)
-        with save:
-            st.download_button("Save my game", data=data.export_game(saves.save_record(result, level)),
-                               file_name=f"chatbot-defense-{level['id']}.json", mime="application/json", key="rp_save")
-        with load:
-            saves.load_game_widget("load_report")

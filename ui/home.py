@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from ui import common, data, saves, store
+from ui import common, data, store
 from ui.common import STAR
 from ui.map import build_map_svg
 
@@ -76,4 +76,3 @@ def home_screen() -> None:
     st.subheader("Security and helpfulness, both at once")
     st.write(GRADING_TEXT)
     grade_tiles()
-    saves.load_game_widget("load_home")

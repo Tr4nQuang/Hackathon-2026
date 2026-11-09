@@ -7,7 +7,7 @@ import uuid
 
 import streamlit as st
 
-from ui import chat, common, data, play, records, report, saves, store
+from ui import chat, common, data, play, records, report, store
 
 COOLDOWN_SECONDS = 30
 RULES_BOX_HEIGHT = 190
@@ -113,7 +113,7 @@ def show_report() -> None:
 
 def watch_replay(result: dict) -> None:
     """Open the replay of a section; the way back leads to this run."""
-    st.session_state.update(replay_log=result["log"], replay_world=result["world_id"], replay_back="endless", replay_loaded=False)
+    st.session_state.update(replay_log=result["log"], replay_world=result["world_id"], replay_back="endless")
     common.start_playback()
     common.goto("replay")
 
@@ -318,8 +318,6 @@ def report_screen(run: dict) -> None:
         if run["confirm_end"]:
             end_confirm(run)
         report_actions(run, result)
-        st.download_button("Save my game", data=data.export_game(saves.save_record(result)), key="e_save_game",
-                           file_name=f"chatbot-defense-endless-{result['section']}.json", mime="application/json")
 
 
 def consent_box(run: dict) -> None:
