@@ -1,4 +1,4 @@
-"""Tutorial guide: one step at a time, the target section highlighted and the others dimmed."""
+"""Tutorial guide: a coach that shows one step at a time, with the target section highlighted and the others dimmed."""
 
 import time
 
@@ -6,15 +6,16 @@ import streamlit as st
 
 from ui import data
 
+# The guide follows the play screen: "play" is the screen before the round, "run" while the chat plays, "report" after.
 TARGET_SCREEN = {
-    "story": "level", "map": "level", "theme": "level", "rules": "level", "start_button": "level",
-    "chat": "playback",
-    "results": "results", "replay_button": "results", "retry_next_buttons": "results",
+    "story": "play", "map": "play", "theme": "play", "rules": "play", "start_button": "play",
+    "chat": "run",
+    "results": "report", "replay_button": "report", "retry_next_buttons": "report",
 }
 SCREEN_SECTIONS = {
-    "level": ("story", "map", "theme", "rules", "start_button"),
-    "playback": ("chat", "map"),
-    "results": ("results", "replay_button", "retry_next_buttons"),
+    "play": ("story", "map", "theme", "rules", "start_button"),
+    "run": ("chat", "map"),
+    "report": ("results", "replay_button", "retry_next_buttons"),
 }
 HIGHLIGHT_COLOR = "#f59e0b"
 DIMMED_OPACITY = 0.35
@@ -26,7 +27,7 @@ def restart() -> None:
 
 
 def skip() -> None:
-    """Close the guide for good (the Help button on the level screen restarts it)."""
+    """Close the guide for good (the Help button restarts it)."""
     st.session_state.update(guide_done=True, guide_skipped=True)
 
 
@@ -53,10 +54,10 @@ def active_step(screen: str, source: dict) -> dict | None:
 
 
 def sync(screen: str, source: dict) -> None:
-    """Move the guide forward when the player reached a screen before its steps (for example pressed Start early)."""
+    """Move the guide forward when the player reached a screen before its steps (for example ran the round early)."""
     steps = data.get_guide_steps(source)
     state = st.session_state
-    if not steps or state["guide_done"] or screen == "level":
+    if not steps or state["guide_done"] or screen == "play":
         return
     first = next((i for i, step in enumerate(steps) if TARGET_SCREEN.get(step["target"]) == screen), None)
     if first is not None and state["guide_index"] < first:
@@ -72,7 +73,7 @@ def highlight_css(screen: str, target: str) -> str:
 
 
 def show(screen: str, source: dict) -> None:
-    """Show the guide box and the highlight for this screen, if a step belongs here."""
+    """Show the coach box and the highlight for this screen, if a step belongs here."""
     sync(screen, source)
     step = active_step(screen, source)
     if step is None:
@@ -80,10 +81,14 @@ def show(screen: str, source: dict) -> None:
     steps = data.get_guide_steps(source)
     index = st.session_state["guide_index"]
     st.html(highlight_css(screen, step["target"]))
-    with st.container(border=True, key="guide_box"):
-        st.markdown(f"**Tutorial, step {index + 1} of {len(steps)}: {step['title']}**")
-        st.write(step["text"])
-        next_col, skip_col, _ = st.columns([1, 1, 4])
-        next_col.button("Got it" if index + 1 == len(steps) else "Next", type="primary", key="guide_next",
-                        on_click=advance, args=(steps,))
-        skip_col.button("Skip tutorial", key="guide_skip", on_click=skip)
+    with st.container(key="guide_box"):
+        avatar, body = st.columns([1, 14], vertical_alignment="top")
+        with avatar, st.container(key="coach_avatar"):
+            st.markdown("C")
+        with body:
+            st.markdown(f"**Tutorial, step {index + 1} of {len(steps)}: {step['title']}**")
+            st.write(step["text"])
+            next_col, skip_col, _ = st.columns([1, 2, 6])
+            next_col.button("Got it" if index + 1 == len(steps) else "Next", type="primary", key="guide_next",
+                            on_click=advance, args=(steps,))
+            skip_col.button("Skip tutorial", key="guide_skip", on_click=skip)

@@ -1,38 +1,75 @@
-"""Browser saved progress: best stars per level only, no personal data, no rules, no player text."""
+"""Browser saved progress: level stars and Endless section bests only. No names, no rules, no player text."""
 
 import json
 
 import streamlit as st
 
-PROGRESS_VERSION = 1
+PROGRESS_VERSION = 2
 STORAGE_KEY = "chatbot-defense-arena-progress"
 MAX_STARS = 3
+MAX_POINTS = 10_000_000
+MAX_SECTION = 999
 
 
-def build_progress(stars: dict[str, int]) -> dict:
+def _count(value: object, top: int) -> bool:
+    """Return True for a plain int from 0 to top (bools are not counts)."""
+    return type(value) is int and 0 <= value <= top
+
+
+# ---- the progress object: plain data, no Streamlit -----------------------------------------------
+
+def build_progress(levels: dict, endless: dict) -> dict:
     """Return the object written to localStorage."""
-    return {"version": PROGRESS_VERSION, "stars": dict(stars)}
+    return {"version": PROGRESS_VERSION, "levels": dict(levels), "endless": dict(endless)}
 
 
-def merge_stars(stars: dict[str, int], level_id: str, new_stars: int) -> dict[str, int]:
-    """Return a copy of stars keeping the best result for level_id (0 stars is never stored)."""
-    merged = dict(stars)
-    if new_stars >= 1:
-        merged[level_id] = max(merged.get(level_id, 0), new_stars)
-    return merged
+def merge_level(levels: dict, level_id: str, stars: int, points: int, perfect: bool) -> dict:
+    """Return a copy of levels keeping the best stars and points and any perfect."""
+    old = levels.get(level_id, {"stars": 0, "best": 0, "perfect": False})
+    return {**levels, level_id: {"stars": max(old["stars"], stars), "best": max(old["best"], points),
+                                 "perfect": old["perfect"] or perfect}}
 
 
-def parse_progress(text: str | None, known_ids: set[str]) -> dict[str, int]:
-    """Return valid {level_id: stars} from saved text; anything invalid is ignored."""
+def merge_section(endless: dict, section: int, points: int, cleared: bool) -> dict:
+    """Return a copy of the Endless bests keeping the best points of a section number and whether it was ever cleared."""
+    key = str(section)
+    old = endless.get(key, {"best": 0, "cleared": False})
+    return {**endless, key: {"best": max(old["best"], points), "cleared": old["cleared"] or cleared}}
+
+
+def endless_totals(endless: dict) -> tuple[int, int]:
+    """Return the saved Score (best points of the cleared sections) and the Cleared count."""
+    cleared = [row for row in endless.values() if row["cleared"]]
+    return sum(row["best"] for row in cleared), len(cleared)
+
+
+def _valid_level(row: object) -> bool:
+    """Return True for {"stars", "best", "perfect"} with sane values."""
+    return (isinstance(row, dict) and set(row) == {"stars", "best", "perfect"} and _count(row["stars"], MAX_STARS)
+            and _count(row["best"], MAX_POINTS) and type(row["perfect"]) is bool)
+
+
+def _valid_section(key: object, row: object) -> bool:
+    """Return True for a section number key and {"best", "cleared"} with sane values."""
+    return (isinstance(key, str) and key.isdigit() and 1 <= int(key) <= MAX_SECTION and isinstance(row, dict)
+            and set(row) == {"best", "cleared"} and _count(row["best"], MAX_POINTS) and type(row["cleared"]) is bool)
+
+
+def parse_progress(text: str | None, known_levels: set[str]) -> tuple[dict, dict]:
+    """Return (levels, endless) from saved text; invalid entries, or the whole thing if malformed, are ignored."""
     try:
         data = json.loads(text or "")
     except (TypeError, ValueError):
-        return {}
-    if not isinstance(data, dict) or data.get("version") != PROGRESS_VERSION or not isinstance(data.get("stars"), dict):
-        return {}
-    return {level_id: stars for level_id, stars in data["stars"].items()
-            if level_id in known_ids and type(stars) is int and 1 <= stars <= MAX_STARS}
+        return {}, {}
+    if not isinstance(data, dict) or data.get("version") != PROGRESS_VERSION:
+        return {}, {}
+    levels = data.get("levels") if isinstance(data.get("levels"), dict) else {}
+    endless = data.get("endless") if isinstance(data.get("endless"), dict) else {}
+    return ({key: row for key, row in levels.items() if key in known_levels and _valid_level(row)},
+            {key: row for key, row in endless.items() if _valid_section(key, row)})
 
+
+# ---- the browser side: every read and write is wrapped so blocked storage changes nothing ----------
 
 def _js_eval(expression: str, key: str):
     """Run one JS expression in the browser; return its value, or None until it answers or if it fails."""
@@ -44,21 +81,34 @@ def _js_eval(expression: str, key: str):
         return None
 
 
-def load_saved_progress(known_ids: set[str]) -> None:
-    """Merge the browser's saved stars into st.session_state["progress"], once per session."""
+def has_saved() -> bool:
+    """Return True when there is level or Endless progress to continue from."""
+    state = st.session_state
+    return bool(state["progress"] or state.get("endless_best"))
+
+
+def load_saved_progress(known_levels: set[str]) -> None:
+    """Merge the browser's saved progress into the session, once per session."""
     state = st.session_state
     if state.get("progress_loaded"):
         return
-    expression = f"(() => {{ try {{ return localStorage.getItem({json.dumps(STORAGE_KEY)}) || '' }} catch (e) {{ return '' }} }})()"
-    text = _js_eval(expression, "progress_load")
-    if text is None:
-        return  # the component answers on a later rerun
-    state["progress_loaded"] = True
-    saved = parse_progress(text, known_ids)
-    for level_id, stars in saved.items():
-        state["progress"] = merge_stars(state["progress"], level_id, stars)
-    state["progress_saved"] = bool(saved)
-    if saved:
+    try:
+        expression = f"(() => {{ try {{ return localStorage.getItem({json.dumps(STORAGE_KEY)}) || '' }} catch (e) {{ return '' }} }})()"
+        text = _js_eval(expression, "progress_load")
+        if text is None:
+            return  # the component answers on a later rerun
+        state["progress_loaded"] = True
+        levels, endless = parse_progress(text, known_levels)
+        for level_id, row in levels.items():
+            state["progress"] = merge_level(state["progress"], level_id, row["stars"], row["best"], row["perfect"])
+        best = state.setdefault("endless_best", {})
+        for key, row in endless.items():
+            best = merge_section(best, int(key), row["best"], row["cleared"])
+        state["endless_best"] = best
+    except Exception:  # noqa: BLE001 bad saved data must never stop the game
+        state["progress_loaded"] = True
+        return
+    if levels or endless:
         st.rerun()
 
 
@@ -67,15 +117,30 @@ def request_save() -> None:
     st.session_state["progress_save_n"] = st.session_state.get("progress_save_n", 0) + 1
 
 
+def record_section(section: int, points: int, cleared: bool) -> None:
+    """Remember the best points of an Endless section number and save it."""
+    state = st.session_state
+    state["endless_best"] = merge_section(state.get("endless_best", {}), section, points, cleared)
+    request_save()
+
+
+def clear_saved() -> None:
+    """Forget level and Endless progress in this session and in the browser."""
+    st.session_state.update(progress={}, endless_best={}, confirm_reset=False, last_package={})
+    request_save()
+
+
 def write_pending_progress() -> None:
-    """Write st.session_state["progress"] to localStorage until the browser confirms it."""
+    """Write the progress to localStorage until the browser confirms it."""
     state = st.session_state
     n = state.get("progress_save_n", 0)
     if n == state.get("progress_saved_n", 0):
         return
-    text = json.dumps(json.dumps(build_progress(state["progress"])))
-    expression = (f"(() => {{ try {{ localStorage.setItem({json.dumps(STORAGE_KEY)}, {text}); return 1 }} "
-                  f"catch (e) {{ return 0 }} }})()")
-    if _js_eval(expression, f"progress_save_{n}") is not None:
+    try:
+        text = json.dumps(json.dumps(build_progress(state["progress"], state.get("endless_best", {}))))
+        expression = (f"(() => {{ try {{ localStorage.setItem({json.dumps(STORAGE_KEY)}, {text}); return 1 }} "
+                      f"catch (e) {{ return 0 }} }})()")
+        if _js_eval(expression, f"progress_save_{n}") is not None:
+            state["progress_saved_n"] = n
+    except Exception:  # noqa: BLE001 a failed save must never stop the game
         state["progress_saved_n"] = n
-        state["progress_saved"] = bool(state["progress"])

@@ -74,3 +74,33 @@ Phases 6, 7, 8, 11, 12B and 13B are done. Optional phases 15 and 17 (Endless run
 ### Notes
 - tests/test_app_smoke.py (B) covers the map, the engine contract against docs/sample_results.json, playback, results, save and load, the guide walkthrough, Endless, the cooldown and the consent rules. It is picked up by tests/run_all.py.
 - Known limits: the level select and progress reset when the page is reloaded; Endless was only run with fake AI replies, so helpfulness is low there until a real key is used.
+
+
+## Arena parity (B, James): the game now follows the original browser demo
+Branch james/arena-parity. The goal was to make the Streamlit game the same game as the team's browser demo, with every feature the demo had, and to keep the features added here, restyled to match. The demo is a design and rules reference only: its HTML, JavaScript, server and key page are not in this repo, and no code was copied. The content tables (three businesses, rule cards, twelve levels, attack and customer scripts) were carried over as JSON data, the logic was rewritten in Python.
+
+### What changed
+- engine/arena/ is a pure Python port of the demo: worlds with four rings (10/25/50/150 points), rule cards with the defenses they cover, bundles, topic bans and a lockdown card, per-try shops, a fast evaluator and a cheapest-perfect-set search, grading (waste share 14%, stars at 85/70/50, security 50 and helpfulness 30 to pass, a breached core is an instant loss), Endless sections, a plain English rules reader, and live AI helpers that go through call_ai(). Content is in scenarios/arena/*.json (a subfolder, so the earlier scenario loader and tests are untouched).
+- The interface is rebuilt around it: top bar, home, level map, rule shop with compute costs, System Core map with hours, deals, loyalty and the rest, the chat with judge lines, report notes, replay with a timeline, Endless (lobby, sections, section report, run over, record board), Records and Settings.
+- Kept from before and restyled: the tutorial guide (adapted to the compute mechanics), consent once per run with anonymous storage, and replay speeds.
+
+### Differences from the demo, on purpose
+- There is no API key field in the game. The key stays in .env (project rule). Settings only shows whether live AI and storage are set up, never a value.
+- The record board is a local file (data/records.json, git ignored), not a shared server board.
+- Level progress and Endless section bests are saved in the browser (localStorage, through ui/progress.py by Boctok0); Settings can reset them.
+- The level map is the demo's winding path: numbered bubbles (locked, next, done, perfect), stars earned below, a dotted line through them and a banner for each business.
+- No JSON file upload or download anywhere. Save my game, Load my game and the progress export and import were removed (by request). engine/save.py is unchanged and still tested.
+- The 30 second pause between Endless runs only applies with live AI (it protects the free quota).
+- Notes name the missing defense on a leak, but never say which rules were unnecessary (as in the demo).
+
+### Notes
+- This work touches engine/, scenarios/ and tests/ (Dong's folders): engine/arena/, scenarios/arena/, tests/test_arena.py, tests/test_ui_pure.py and a rewritten tests/test_app_smoke.py. ui/screens.py and ui/playback.py were deleted because the new screens replace them. The old engine, loader, storage and save modules are unchanged and still pass their tests.
+- Tests: tests/test_arena.py (engine), tests/test_ui_pure.py (map, local files, saves, notes, Endless run) and tests/test_app_smoke.py (flows in Streamlit's AppTest). Every shop of every level and package is checked to allow a Perfect round.
+
+### Look and flow changes after review (B, James)
+- The theme now follows the system, light or dark, with the demo's own colour tokens (ui/theme.py, and `[theme.light]` / `[theme.dark]` in .streamlit/config.toml so Streamlit's widgets match). This replaces the earlier decision to lock a light theme. The map has `--t2-ink` / `--t3-ink` tokens because the core is light and its text dark in dark mode.
+- Fonts are the demo's (Archivo, Atkinson Hyperlegible, IBM Plex Mono) loaded from Google Fonts, with system fallbacks. This replaces the earlier "system fonts only" decision, and means the page makes one request to fonts.googleapis.com.
+- Rule cards use checkboxes (not toggles), the compute cost on the right in gold.
+- The chat is a phone-style window: logo, name and status in the header, a fixed height with its own scrollbar, the sender above each bubble.
+- When the chat reaches its last message the report opens by itself after 1.2 seconds (the round, and an Endless section). It happens once per round, so Close does not bounce back. The Report button stays as a fallback.
+- Icons are inline SVG drawn in ui/icons.py (shield, cup, car, cap, bolt), not emoji, so they line up in the top bar, business banners, chat header and rule costs. The chat is a phone frame: bezel, speaker slot, status bar, home bar and a fixed 44rem height whose body scrolls.
