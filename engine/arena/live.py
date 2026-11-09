@@ -6,7 +6,7 @@ Every AI call goes through call_ai(). With USE_FAKE_AI=true (the default) nothin
 import json
 import os
 
-from engine.ai import GEMINI_MODEL, call_ai
+from engine.ai import active_model, call_ai
 from engine.arena.content import rules_data
 from engine.arena.scripts import make_attack
 
@@ -32,7 +32,7 @@ def is_live() -> bool:
 
 def model_name() -> str:
     """Return the name of the model that answers in live mode."""
-    return GEMINI_MODEL
+    return active_model()
 
 
 def ai_reply(world: dict, rules: str, message: str, ask=call_ai) -> str:
