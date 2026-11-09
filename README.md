@@ -27,12 +27,10 @@ rules must fit a word budget, so "refuse everything" and "guard everything" neve
 
 | | |
 |---|---|
-| ![Home: the pitch, the three game modes and an example System Core map](docs/screenshots/01-home.png) | ![Level map: a winding path of numbered bubbles, stars earned below each](docs/screenshots/06-levels.png) |
-| ![The tutorial guide highlights one part of the screen and dims the rest](docs/screenshots/02-tutorial-guide.png) | ![Playback: your rules, the System Core map and the chat change together](docs/screenshots/03-playback.png) |
-| ![Report: grade, scores and what got through](docs/screenshots/04-results.png) | ![Endless mode: write your rules in plain English](docs/screenshots/05-endless.png) |
+| ![Home: the pitch, the three game modes and an example System Core map](docs/screenshots/01-home.png) | ![Level mode: the map of 12 levels, a winding path of numbered bubbles over three businesses](docs/screenshots/06-levels.png) |
+| ![The tutorial guide highlights the rules box and dims the rest; intel and the word budget above](docs/screenshots/02-tutorial-guide.png) | ![A shift playing out: your rules, the System Core map with a leak, and the chat with the judge's verdicts](docs/screenshots/03-playback.png) |
+| ![Report: stars, security, helpfulness, words used, the level's goals and what leaked](docs/screenshots/04-results.png) | ![Endless Siege: a hidden visitor waits for Block or Let it through before the countdown ends, with trust above](docs/screenshots/05-endless.png) |
 | ![Settings: chat speed and progress](docs/screenshots/07-settings.png) | |
-
-> These screenshots were taken before the live shifts (Siege and the campaign) and show the older screens; new ones are coming.
 
 The look follows your system: light or dark, with the same colours as the original browser demo. The page loads its
 fonts (Archivo, Atkinson Hyperlegible, IBM Plex Mono) from Google Fonts and falls back to system fonts offline.

@@ -79,8 +79,8 @@ def home_screen() -> None:
         common.eyebrow("natHacks 2026 · Defense & Security", "hero")
         st.markdown("# Every chatbot has a core. **Don't let it get hacked.**")
         with st.container(key="lede"):
-            st.write("You're the blue team for a business chatbot. Choose or write its rules, then watch AI attackers go after "
-                     "what it knows while real customers still need answers. The closer to the core, the more it is worth: "
+            st.write("You're the blue team for a business chatbot. Write its rules in plain English, then decide on every visitor: "
+                     "attackers go after what it knows while real customers still need answers. The closer to the core, the more it is worth: "
                      "admin passwords, bank accounts, personal records and actions the bot should never take. Opening hours "
                      "sit at the edge.")
         saved = progress.has_saved()
