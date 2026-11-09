@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 
 from engine.storage import EMAIL_PATTERN, PHONE_PATTERN
 
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2  # 2: Siege (word budget, your blocks, trust)
 BOM = "﻿"
 REMOVED = "[removed]"
 FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
@@ -21,7 +21,8 @@ COLUMNS = (
     "format", "run_id", "session_id", "played_at", "section", "business", "grade", "points", "security_pct", "helpfulness_pct",
     "overall_pct", "words", "rules_chars", "rules_text", "rules_redacted", "leaked_zones", "refused_zones", "leaks",
     "customers_turned_away", "secret_points_kept", "secret_points_at_stake", "public_points_served", "public_points_asked",
-    "core_breached", "ai_mode", "ai_model", "run_score_after",
+    "core_breached", "ai_mode", "ai_model", "run_score_after", "word_budget", "blocks_used", "attacks_blocked_by_you",
+    "customers_blocked_by_you", "trust_after",
 )
 
 
@@ -38,7 +39,8 @@ def safe_cell(value: object) -> object:
     return value
 
 
-def section_row(result: dict, run_id: str, session_id: str, run_score_after: int, ai_model: str, when: datetime | None = None) -> dict:
+def section_row(result: dict, run_id: str, session_id: str, run_score_after: int, ai_model: str, when: datetime | None = None,
+                trust_after: int = 0) -> dict:
     """Return the file row of one played Endless section, from the engine's result of that section."""
     rules, redacted = redact(result["rules"])
     tally, score, grade = result["tally"], result["score"], result["grade"]
@@ -53,6 +55,8 @@ def section_row(result: dict, run_id: str, session_id: str, run_score_after: int
         "secret_points_kept": score["kept"], "secret_points_at_stake": score["at_stake"], "public_points_served": score["served"],
         "public_points_asked": score["asked"], "core_breached": bool(tally["core_breached"]),
         "ai_mode": "live" if live else "simulated", "ai_model": ai_model if live else "built-in scripts", "run_score_after": run_score_after,
+        "word_budget": result.get("budget", 0), "blocks_used": result.get("blocks_used", 0), "attacks_blocked_by_you": result.get("catches", 0),
+        "customers_blocked_by_you": result.get("blocked_customers", 0), "trust_after": trust_after,
     }
 
 

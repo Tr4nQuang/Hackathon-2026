@@ -100,22 +100,77 @@ def _reply_or_fallback(get_reply: Callable[[dict], str], message: dict, tally: d
     return message["a"] if message["kind"] == "customer" else message.get("block_text", OFFLINE_NOTE)
 
 
-def play_round(world: dict, messages: list[dict], get_reply: Callable[[dict], str], loose: bool = False) -> dict:
-    """Play every message in order and return the log, the tally and the score. A breached core ends the round."""
-    rec, names, customers = _Recorder(world), scripts()["names"], 0
+def _blocked_entries(rec: _Recorder, message: dict, who: str, index: int) -> None:
+    """Record a message the player blocked before the chatbot saw it: an attack is stopped, a customer is turned away."""
+    world, state, tally = rec.world, rec.state, rec.tally
+    if message["kind"] == "attack":
+        tally["at_stake"].add(message["asset"])
+        tally["caught"].append(message)
+        if state.get(message["asset"]) != "breached":
+            state[message["asset"]] = "safe"
+        label = rules_data()["type_label"][message["type"]]
+        rec.push({"type": "msg", "role": "attacker", "name": who, "tag": f"Attacker · {label}", "text": message["text"]})
+        rec.push({"type": "judge", "cls": "good", "fn": "guard.block() → attack", "text": "You blocked it before the chatbot saw it."})
+        return
+    tally["asked"].add(message["topic"])
+    tally["refused_topics"].add(message["topic"])
+    tally["refused"].append({**message, "by_guard": True})
+    state[message["topic"]] = "refused"
+    rec.push({"type": "msg", "role": "customer", "name": who, "tag": "Customer", "text": message["q"]})
+    rec.push({"type": "judge", "cls": "warn", "fn": "guard.block() → customer", "text": "You blocked a real customer. Public points lost."})
+    rec.push({"type": "msg", "role": "customer", "name": who, "tag": "Customer", "text": scripts()["lost"][index % len(scripts()["lost"])]})
+
+
+def start_round(world: dict, messages: list[dict], loose: bool = False) -> dict:
+    """Start a round that is played one message at a time (step), so the player can block messages as they arrive."""
+    rec = _Recorder(world)
+    rec.tally["caught"] = []
     rec.push({"type": "sys", "text": f"{len(messages)} visitors will chat today"})
-    core_id = core_of(world)["id"]
-    for index, message in enumerate(messages):
-        rec.push({"type": "sys", "cls": "new", "text": f"New chat · {clock(index)}"})
-        who = message["attacker"] if message["kind"] == "attack" else names[customers % len(names)]
-        customers += message["kind"] == "customer"
-        reply = _reply_or_fallback(get_reply, message, rec.tally)
-        if message["kind"] == "attack":
-            _attack_entries(rec, message, who, reply)
-        else:
-            _customer_entries(rec, message, who, reply, index, loose)
-        if core_id in rec.tally["breached"]:
-            rec.tally["core_breached"] = True
-            rec.push({"type": "sys", "cls": "alarm", "text": ALARM})
-            break
-    return {"log": rec.log, "tally": plain_tally(rec.tally), "score": tally_score(world, rec.tally)}
+    return {"rec": rec, "messages": messages, "index": 0, "customers": 0, "loose": loose, "done": not messages}
+
+
+def pending(round_state: dict) -> dict | None:
+    """Return the next message of the round, or None when the round is over."""
+    return None if round_state["done"] else round_state["messages"][round_state["index"]]
+
+
+def step(round_state: dict, get_reply: Callable[[dict], str], blocked: bool = False) -> None:
+    """Play the next message: let the chatbot answer it, or (blocked) stop it before the chatbot sees it."""
+    message, rec = pending(round_state), round_state["rec"]
+    if message is None:
+        raise ValueError("the round is over")
+    index = round_state["index"]
+    rec.push({"type": "sys", "cls": "new", "text": f"New chat · {clock(index)}"})
+    names = scripts()["names"]
+    who = message["attacker"] if message["kind"] == "attack" else names[round_state["customers"] % len(names)]
+    round_state["customers"] += message["kind"] == "customer"
+    if blocked:
+        _blocked_entries(rec, message, who, index)
+    elif message["kind"] == "attack":
+        _attack_entries(rec, message, who, _reply_or_fallback(get_reply, message, rec.tally))
+    else:
+        _customer_entries(rec, message, who, _reply_or_fallback(get_reply, message, rec.tally), index, round_state["loose"])
+    round_state["index"] += 1
+    if core_of(rec.world)["id"] in rec.tally["breached"]:
+        rec.tally["core_breached"] = True
+        rec.push({"type": "sys", "cls": "alarm", "text": ALARM})
+        round_state["done"] = True
+    elif round_state["index"] >= len(round_state["messages"]):
+        round_state["done"] = True
+
+
+def finish_round(round_state: dict) -> dict:
+    """Return the log, the tally and the score of a round."""
+    rec = round_state["rec"]
+    tally = plain_tally(rec.tally)
+    tally.setdefault("caught", [])
+    return {"log": rec.log, "tally": tally, "score": tally_score(rec.world, rec.tally)}
+
+
+def play_round(world: dict, messages: list[dict], get_reply: Callable[[dict], str], loose: bool = False,
+               blocked: frozenset = frozenset()) -> dict:
+    """Play every message in order (blocking the ones whose index is in blocked) and return the log, the tally and the score."""
+    round_state = start_round(world, messages, loose)
+    while pending(round_state) is not None:
+        step(round_state, get_reply, round_state["index"] in blocked)
+    return finish_round(round_state)

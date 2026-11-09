@@ -27,7 +27,8 @@ def files_in(paths: list[str]) -> list[Path]:
 def typed(row: dict) -> dict:
     """Return a row read from a file with its numbers and booleans turned back into numbers and booleans."""
     ints = ("format", "section", "points", "security_pct", "helpfulness_pct", "overall_pct", "words", "rules_chars", "leaks",
-            "customers_turned_away", "secret_points_kept", "secret_points_at_stake", "public_points_served", "public_points_asked", "run_score_after")
+            "customers_turned_away", "secret_points_kept", "secret_points_at_stake", "public_points_served", "public_points_asked", "run_score_after",
+            "word_budget", "blocks_used", "attacks_blocked_by_you", "customers_blocked_by_you", "trust_after")
     out = {name: (int(row[name]) if name in ints else row[name]) for name in export.COLUMNS}
     for name in ("rules_redacted", "core_breached"):
         out[name] = row[name] == "True"
