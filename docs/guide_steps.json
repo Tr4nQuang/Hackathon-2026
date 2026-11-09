@@ -1,0 +1,62 @@
+[
+  {
+    "id": "welcome",
+    "target": "story",
+    "title": "Welcome",
+    "text": "You protect Beanie, the chatbot of Polar Bean Café. Attackers will try to trick Beanie into leaking secrets."
+  },
+  {
+    "id": "read_map",
+    "target": "map",
+    "title": "Read the map",
+    "text": "The outer ring is information Beanie should share with customers, like opening hours and the menu. The inner ring holds secrets like the staff discount code. The core holds the most valuable data, like loyalty member data. The closer to the centre, the more points an area is worth."
+  },
+  {
+    "id": "dark_areas",
+    "target": "map",
+    "title": "Dark areas",
+    "text": "A dark inner or core area means a secret leaked. A dark outer area means a real customer was refused. If the core turns dark, you lose the level."
+  },
+  {
+    "id": "theme",
+    "target": "theme",
+    "title": "The level theme",
+    "text": "This card hints at what the attackers want, without telling you exactly what they will ask."
+  },
+  {
+    "id": "pick_rules",
+    "target": "rules",
+    "title": "Pick your rules",
+    "text": "Each rule is a sentence added to Beanie's instructions. Extra rules cost points, and some rules are so strict that they turn real customers away."
+  },
+  {
+    "id": "start",
+    "target": "start_button",
+    "title": "Start",
+    "text": "Press Start to send the attackers and the customers to Beanie one message at a time."
+  },
+  {
+    "id": "watch",
+    "target": "chat",
+    "title": "Watch the chat and the map",
+    "text": "The chat and the map change at the same moment. Watch which message turns an area dark."
+  },
+  {
+    "id": "results",
+    "target": "results",
+    "title": "Results",
+    "text": "See your security score, your helpfulness score, the penalty for extra rules and your grade: Perfect, one to three stars, fail, or lose."
+  },
+  {
+    "id": "replay",
+    "target": "replay_button",
+    "title": "Replay",
+    "text": "Replay the conversation and the map changes to see which message caused each dark area."
+  },
+  {
+    "id": "retry_next",
+    "target": "retry_next_buttons",
+    "title": "Retry or Next",
+    "text": "Retry plays this level again with different rules. Next moves on to the next tutorial part."
+  }
+]

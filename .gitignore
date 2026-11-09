@@ -1,4 +1,18 @@
-.DS_Store
+# Secrets
 .env
-records.json
+
+# Python
 __pycache__/
+*.pyc
+.venv/
+venv/
+
+# Saved game data kept on this computer (the record board; may contain player names). The browser game's own
+# JavaScript data folder, data/, is tracked on purpose.
+local_data/
+records.json
+
+# OS and editors
+.DS_Store
+.vscode/
+.idea/

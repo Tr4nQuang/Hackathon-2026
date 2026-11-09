@@ -1,0 +1,17 @@
+# Light and dark follow the player's system, like the game's own stylesheet in ui/theme.py.
+[theme.light]
+primaryColor = "#1a5da8"
+backgroundColor = "#edf1f4"
+secondaryBackgroundColor = "#f5f8fa"
+textColor = "#12202b"
+font = "sans serif"
+
+[theme.dark]
+primaryColor = "#6ea6ec"
+backgroundColor = "#0d161d"
+secondaryBackgroundColor = "#192833"
+textColor = "#e4ecf2"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
