@@ -69,6 +69,10 @@ means you lose the round. The chat and the map change together, message by messa
 The first tutorial level has a 10 step guide (restart it with the Help button). A level unlocks the next one
 when you earn at least one star.
 
+**Your progress is saved automatically**, only in this browser on this computer (localStorage), and is
+never sent anywhere. It holds just your best stars per level, nothing you typed. Use *Continue* on the Home
+screen to pick up where you left off, or *Start over* to clear it.
+
 **Endless mode** is where a real chatbot is tested. You write your rules in plain English (up to 1000
 characters, the first 400 are free and every started 100 after that costs 2 points). A real AI plays Beanie,
 hand written attackers and customers talk to it, and a code judge scores every reply. There is a 30 second
