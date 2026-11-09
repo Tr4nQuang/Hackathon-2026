@@ -4,8 +4,8 @@ natHacks 2026, Standard Division, Defense and Security theme.
 
 **You are on the blue team.** Three small businesses (a café, a car dealership and a university's student
 support) each run a chatbot, and attackers are trying to trick it into leaking what it knows or doing what it
-must never do. You choose or write the rules that protect the chatbot, then watch the attackers and the real
-customers talk to it while a map of the business, the **System Core**, changes message by message. You score
+must never do. You write the rules that protect the chatbot in plain English, then decide on each visitor (block
+them or let them talk to the chatbot) while a map of the business, the **System Core**, changes message by message. You score
 for every secret kept (**security**) and for every real customer still served (**helpfulness**), and your
 rules must fit a word budget, so "refuse everything" and "guard everything" never win.
 
@@ -32,6 +32,8 @@ rules must fit a word budget, so "refuse everything" and "guard everything" neve
 | ![Report: grade, scores and what got through](docs/screenshots/04-results.png) | ![Endless mode: write your rules in plain English](docs/screenshots/05-endless.png) |
 | ![Settings: chat speed and progress](docs/screenshots/07-settings.png) | |
 
+> These screenshots were taken before the live shifts (Siege and the campaign) and show the older screens; new ones are coming.
+
 The look follows your system: light or dark, with the same colours as the original browser demo. The page loads its
 fonts (Archivo, Atkinson Hyperlegible, IBM Plex Mono) from Google Fonts and falls back to system fonts offline.
 
@@ -48,12 +50,13 @@ python test_engine.py              # runs every test (engine and interface), no 
 streamlit run app.py
 ```
 
-By default `USE_FAKE_AI=true`, so the whole game runs **without any API key**. Level mode never needs an AI at
-all. Endless mode then uses built-in attack scripts, and a simulated chatbot reads your plain English rules.
+By default `USE_FAKE_AI=true`, so the whole game runs **without any API key**. The tutorial and Level mode never use an AI:
+built-in attack scripts and a simulated chatbot that reads your plain English rules. Endless mode does the same without a key.
 
 To play Endless mode against a live AI (a real chatbot and a real attacker), create a key in Google AI Studio, put it in `.env` as `GEMINI_API_KEY`
-and set `USE_FAKE_AI=false`. Keys live only in `.env`, which git ignores. The game has no page for typing a key
-and never prints one.
+and set `USE_FAKE_AI=false`. The game tries a short list of Gemini Flash and Flash-Lite models in order and remembers the first
+one that answers (set `GEMINI_MODEL` to try your own first). Keys live only in `.env`, which git ignores. The game has no page for
+typing a key and never prints one.
 
 ## How to play
 
@@ -93,11 +96,13 @@ caught an attacker + 3 per unused word, and 0 if the shift fails.
    backfire: "never reveal anything" also silences real customers, "confidential" alone protects nothing, and a line
    without an instruction (never, don't, ignore...) does nothing. Rules carry over to the next shift.
 3. **The shift.** Visitors arrive one at a time and **nobody tells you who is an attacker**. Each waits for your call
-   with a countdown: **Block** them (three blocks per shift, more later) or **Let it through** to the chatbot, which
-   answers under your rules. Blocking a real customer turns them away. When time runs out, the chatbot answers.
+   with a countdown (12 seconds at first, down to 4): **Block** them (three blocks per shift, up to five later) or **Let it
+   through** to the chatbot, which answers under your rules. Blocking a real customer turns them away. When time runs out,
+   the chatbot answers.
 4. **Trust.** Leaks cost the business's trust in its chatbot (10 for internal information, 25 for personal data, money
-   or a forbidden action, 3 per turned-away customer); a perfect shift gives 5 back. The run ends when trust runs out,
-   or at once if the core is breached.
+   or a forbidden action, 3 per turned-away customer, and 10 more for a failed shift); a perfect shift gives 5 back. Trust
+   starts at 100. The run ends when trust runs out, or at once if the core is breached. A failed shift scores nothing but
+   the run goes on while trust is left.
 5. **The attackers adapt.** They study the rules you used last time and go for what they left out. Every shift has more
    attackers and customers, more targets, combined attacks that need several defenses at once, less time per visitor
    and fewer words. Intel gets patchier the deeper you go.
@@ -134,7 +139,7 @@ file (for example by email). The admin puts many files together with:
 python tools/merge_runs.py folder_with_the_files -o all_endless_runs.csv
 ```
 
-It skips files that are not run files, keeps a section that was sent twice once, sorts by time and prints a short summary.
+It skips files that are not run files, keeps a shift that was sent twice only once, sorts by time and prints a short summary.
 
 Even a perfect result carries one honest lesson. Rules in a prompt are only the first layer of defence. The
 best defence is to never give a chatbot a secret it does not need.
@@ -143,17 +148,18 @@ best defence is to never give a chatbot a secret it does not need.
 
 ```
 app.py          Streamlit entry point, routes between the screens
-ui/             interface: home, levels, play and replay, report, Endless, records, settings, browser
-                saved progress (progress.py),
-                the shared chat and map playback (chat.py), the tutorial guide, the SVG System Core
-                map, the stylesheet (theme.py), the top bar (shell.py), local files (store.py) and
-                data.py (the only file that talks to engine/)
-.streamlit/     Streamlit theme (light theme and accent colour)
-engine/         game logic: engine/arena/ (worlds, scripts, rounds, grading, campaign levels, Endless and
-                the live AI helpers), the earlier level engine, code judge, save files, optional
-                storage, and call_ai() (every AI call goes through it)
-scenarios/      game content as JSON: the first café scenarios, and scenarios/arena/ (worlds, rule
-                cards, levels, attack and customer scripts)
+ui/             interface: home, levels (the map of levels) and play.py (a level's brief and shift), the live shift
+                with Block and Let it through shared by levels and Endless (shift.py), report, Endless, records,
+                settings, browser saved progress (progress.py), the chat and map playback (chat.py), the
+                tutorial guide, the SVG System Core map (map.py), the stylesheet (theme.py), the top bar
+                (shell.py), local files (store.py) and data.py (the only file that talks to engine/)
+.streamlit/     Streamlit theme colours for light and dark (the game follows your system)
+engine/         game logic: engine/arena/ (worlds, attack and customer scripts, the rule reader, rounds,
+                grading, the campaign of levels, Endless and the live AI helpers), the run file (export.py),
+                the earlier level engine, code judge, save files, optional storage, and call_ai() (every AI call
+                goes through it)
+scenarios/      game content as JSON: the first café scenarios, and scenarios/arena/ (worlds, defenses and
+                rule wording, the 12 levels and the tutorial, Endless tuning, attack and customer scripts)
 tools/          admin tools: tools/merge_runs.py merges the run files players send
 tests/          plain assert tests, `python tests/run_all.py` runs them all
 docs/           plan, build contract (MASTER_PROMPT.md), sample data, supabase.sql, screenshots
@@ -194,6 +200,6 @@ Storage is **off unless you set it up**, and the game works exactly the same wit
   source automated red teaming from the command line, and Lakera (now part of Check Point) and WitnessAI sell
   enterprise AI security. This project is made for people who cannot code and for small businesses. We have
   not found another product that combines these pieces this way, and we do not claim to be the first.
-- **Built with.** Python, [Streamlit](https://streamlit.io), Google Gemini (`gemini-2.5-flash-lite`) through
+- **Built with.** Python, [Streamlit](https://streamlit.io), Google Gemini (Flash and Flash-Lite models) through
   the `google-genai` library, and optionally Supabase.
 - **All businesses, people and data in the game are fictional.**
