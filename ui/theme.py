@@ -114,7 +114,8 @@ PLAY = """
 .st-key-panel_chat { padding: 0 !important; gap: 0; overflow: hidden; }
 .st-key-chat_head { border-bottom: 1px solid var(--line); padding: .7rem 1rem; gap: .1rem; background: var(--surface-2); }
 .st-key-chat_head p { font-weight: 800; }
-.st-key-chat_body { padding: 1rem; gap: .5rem; min-height: 22rem; }
+.st-key-chat_body { padding: 1rem; gap: .5rem; height: 32rem; max-height: 70vh; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.st-key-chat_body > * { flex: none; }
 [class*="st-key-bub_"] { width: fit-content; max-width: 88%; padding: .55rem .85rem; border-radius: 14px; gap: .1rem; }
 [class*="st-key-bub_"] [data-testid="stText"], [class*="st-key-bub_"] [data-testid="stText"] * {
   font-family: inherit; font-size: .95rem; white-space: pre-wrap; overflow-wrap: anywhere; }

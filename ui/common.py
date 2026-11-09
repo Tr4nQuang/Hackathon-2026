@@ -20,8 +20,8 @@ SCROLL_TO_TOP = (
 )
 SCROLL_TO_LATEST = (
     "<script>/* latest {token} */(function () {{"
-    "var rows = document.querySelectorAll('[class*=\"st-key-chatrow_\"]');"
-    "if (rows.length) {{ rows[rows.length - 1].scrollIntoView({{block: 'nearest', behavior: 'smooth'}}); }}"
+    "var body = document.querySelector('.st-key-chat_body');"
+    "if (body) {{ body.scrollTo({{top: body.scrollHeight, behavior: 'smooth'}}); }}"
     "}})();</script>"
 )
 
@@ -47,7 +47,7 @@ def scroll_to_top() -> None:
 
 
 def scroll_to_latest(token: str) -> None:
-    """Keep the newest chat entry in view."""
+    """Scroll the chat window (not the page) down to the newest entry."""
     run_script(SCROLL_TO_LATEST.format(token=token))
 
 
