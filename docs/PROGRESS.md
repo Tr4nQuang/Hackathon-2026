@@ -103,3 +103,4 @@ Branch james/arena-parity. The goal was to make the Streamlit game the same game
 - Rule cards use checkboxes (not toggles), the compute cost on the right in gold.
 - The chat is a phone-style window: logo, name and status in the header, a fixed height with its own scrollbar, the sender above each bubble.
 - When the chat reaches its last message the report opens by itself after 1.2 seconds (the round, and an Endless section). It happens once per round, so Close does not bounce back. The Report button stays as a fallback.
+- Icons are inline SVG drawn in ui/icons.py (shield, cup, car, cap, bolt), not emoji, so they line up in the top bar, business banners, chat header and rule costs. The chat is a phone frame: bezel, speaker slot, status bar, home bar and a fixed 44rem height whose body scrolls.

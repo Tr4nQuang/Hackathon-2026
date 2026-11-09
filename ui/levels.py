@@ -4,7 +4,7 @@ import math
 
 import streamlit as st
 
-from ui import common, data
+from ui import common, data, icons
 
 BANNER_PX = 104  # height of the row of a business banner
 ROW_PX = 122  # height of the row of a level
@@ -95,7 +95,6 @@ def levels_screen() -> None:
             mine = [i for i, level in enumerate(levels) if level["world"] == world_id]
             done = sum(states[i]["done"] for i in mine)
             with st.container(key=f"worldrow_{world_id}"), st.container(key=f"world_{world_id}"):
-                st.subheader(f"{common.WORLD_ICON[world_id]} {world['name']}")
-                st.caption(f"{world['short']} · {done}/{len(mine)} cleared")
+                st.markdown(icons.heading(world_id, world["name"], f"{world['short']} · {done}/{len(mine)} cleared"), unsafe_allow_html=True)
             for index in mine:
                 level_bubble(index, levels, progress, first_open)

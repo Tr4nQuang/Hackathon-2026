@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from ui import common, data
+from ui import common, data, icons
 
 NAV = (
     ("Home", "home", ("home",)),
@@ -28,7 +28,7 @@ def topbar() -> None:
     with st.container(key="topbar"):
         brand, tag, *buttons = st.columns([4, 2, 1.3, 1.3, 1.3, 1.3, 1.3], gap="small", vertical_alignment="center")
         with brand, st.container(key="brand"):
-            st.markdown("\U0001f6e1️ **Chatbot Defense Arena**")
+            st.markdown(icons.brand("Chatbot Defense Arena"), unsafe_allow_html=True)
         with tag, st.container(key="ai_tag"):
             st.caption("Live AI on" if data.live.is_live() else "Demo build")
         for column, (label, target, _) in zip(buttons, NAV):

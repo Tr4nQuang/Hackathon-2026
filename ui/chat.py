@@ -9,7 +9,7 @@ from typing import Callable
 
 import streamlit as st
 
-from ui import common, data, guide
+from ui import common, data, guide, icons
 from ui.map import build_map_svg, legend_svg, timeline_svg
 
 TICK_SECONDS = 0.4
@@ -114,12 +114,7 @@ def show_entry(index: int, entry: dict) -> None:
 def chat_head(world: dict, status: str) -> None:
     """Show the top of the chat window like a phone: the business logo, the chatbot's name and a status line."""
     with st.container(key="chat_head"):
-        logo, text = st.columns([1, 9], vertical_alignment="center")
-        with logo, st.container(key="chat_logo"):
-            st.markdown(common.WORLD_ICON[world["id"]])
-        with text:
-            st.markdown(f"**{world['bot']}**")
-            st.caption(f":green[●] {status}")
+        st.markdown(icons.status_heading(world["id"], world["bot"], status), unsafe_allow_html=True)
 
 
 def show_chat(world: dict, log: list[dict], step: int, status: str, typing: bool) -> None:
@@ -138,7 +133,7 @@ def show_map_panel(world: dict, entry: dict | None) -> None:
     """Show the map as it is after this entry, its points tally and the legend."""
     score = entry["score"] if entry else {"at_stake": 0, "kept": 0, "lost": 0, "asked": 0, "served": 0}
     with st.container(key="panel_map"), st.container(key="sec_map"):
-        head, chip = st.columns([3, 2])
+        head, chip = st.columns([3, 2], vertical_alignment="center")
         head.subheader("System core")
         chip.caption(world["short"])
         common.show_svg(build_map_svg(world, entry["map"] if entry else {}))

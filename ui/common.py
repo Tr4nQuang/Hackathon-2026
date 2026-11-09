@@ -10,7 +10,6 @@ from ui import data
 STAR = "★"
 NO_STAR = "☆"
 PERSONAL_DATA_NOTICE = "Do not enter real personal information. Everything here is fictional."
-WORLD_ICON = {"cafe": "☕", "dealer": "\U0001f697", "uni": "\U0001f393"}
 
 SCROLL_TO_TOP = (
     "<script>/* scroll {count} */(function () {{"

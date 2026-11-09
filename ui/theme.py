@@ -72,7 +72,7 @@ SHELL = """
 .st-key-topbar { background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
   padding: .55rem 1rem; margin-bottom: 1.1rem; box-shadow: var(--shadow); }
 .st-key-topbar [data-testid="stHorizontalBlock"] { align-items: center; }
-.st-key-brand p { margin: 0; font-weight: 800; font-size: 1.1rem; letter-spacing: -.01em; }
+.st-key-brand p { margin: 0; }
 [class*="st-key-panel"] { background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
   padding: 1.1rem; box-shadow: var(--shadow); min-width: 0; }
 .st-key-panel_map { position: sticky; top: .75rem; }
@@ -134,15 +134,30 @@ PLAY = """
 .st-key-tally [data-testid="stMetricValue"] { font-size: 1.4rem; justify-content: center; }
 .st-key-tally [data-testid="stMetricLabel"] { justify-content: center; }
 .legend-row p { font-size: .8rem; color: var(--muted); }
-.st-key-panel_chat { padding: 0 !important; gap: 0; overflow: hidden; border-radius: 22px; }
-.st-key-chat_head { border-bottom: 1px solid var(--line); padding: .65rem 1rem; gap: .1rem; background: var(--bean-soft); }
-.st-key-chat_head [data-testid="stHorizontalBlock"] { gap: .6rem; }
-.st-key-chat_head p { margin: 0; }
-.st-key-chat_head strong { font-family: var(--f-display); font-stretch: 108%; font-size: 1rem; }
-.st-key-chat_logo { width: 2.1rem !important; height: 2.1rem !important; min-height: 2.1rem !important; flex: none; border-radius: 8px; background: var(--bean); display: flex;
-  flex-direction: column; align-items: center; justify-content: center; }
-.st-key-chat_logo p { font-size: 1.2rem !important; line-height: 1; }
-.st-key-chat_body { padding: 1rem; gap: .55rem; height: 36rem; max-height: 70vh; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+/* The chat looks like a phone: a bezel, a speaker slot and a status bar on top, a home bar below, a fixed height. */
+.st-key-panel_chat { padding: 0 !important; gap: 0; overflow: hidden; border-radius: 34px; border: 6px solid color-mix(in srgb, var(--ink) 18%, var(--surface));
+  background: var(--surface); flex: none !important; height: 44rem !important; min-height: 44rem; max-height: 88vh; box-shadow: var(--shadow); }
+.st-key-panel_chat::before { content: ""; display: block; flex: none; height: 1.5rem; background: linear-gradient(var(--line), var(--line)) center / 4.2rem .32rem no-repeat, var(--bean-soft); }
+.st-key-panel_chat::after { content: ""; display: block; flex: none; height: 1.4rem; background: linear-gradient(var(--line), var(--line)) center / 6.5rem .3rem no-repeat, var(--surface); }
+.st-key-chat_head { border-bottom: 1px solid var(--line); padding: .35rem 1rem .75rem; background: var(--bean-soft); flex: none; }
+.cda-head { display: flex; align-items: center; gap: .7rem; min-width: 0; }
+.cda-logo { width: 2.1rem; height: 2.1rem; border-radius: 8px; background: var(--bean); display: grid; place-items: center; flex: none; }
+.cda-logo svg { width: 1.2rem; height: 1.2rem; display: block; }
+.cda-ic { stroke-linecap: round; stroke-linejoin: round; }
+.cda-ic-cup, .cda-ic-car, .cda-ic-cap { fill: none; stroke: var(--surface); stroke-width: 1.9; }
+.cda-ic-shield { fill: var(--accent); } .cda-ic-bolt { fill: var(--gold); }
+.cda-headtext { display: flex; flex-direction: column; gap: .1rem; line-height: 1.25; min-width: 0; }
+.cda-headtext b { font-family: var(--f-display); font-stretch: 108%; font-size: 1rem; color: var(--ink); }
+.cda-sub { font-size: .8rem; color: var(--muted); display: flex; align-items: center; gap: .4rem; }
+.cda-dot { width: .45rem; height: .45rem; border-radius: 50%; background: var(--good); display: inline-block; flex: none; }
+.cda-brand { display: flex; align-items: center; gap: .6rem; }
+.cda-brand svg { width: 1.6rem; height: 1.6rem; display: block; }
+.cda-brand b { font-family: var(--f-display); font-stretch: 118%; font-weight: 800; font-size: 1.05rem; letter-spacing: -.01em; color: var(--ink); }
+.cda-cost { display: flex; align-items: center; justify-content: flex-end; gap: .2rem; font-family: var(--f-mono); font-weight: 600; font-size: .85rem; color: var(--gold); }
+.cda-cost svg { width: .9rem; height: .9rem; display: block; }
+.st-key-panel_chat > div:has(> .st-key-chat_body) { flex: 1 1 0 !important; min-height: 0; display: flex; flex-direction: column; }
+.st-key-panel_chat > div:has(> .st-key-chat_head) { flex: none; }
+.st-key-chat_body { padding: 1rem; gap: .55rem; flex: 1 1 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .st-key-chat_body > * { flex: none; }
 [class*="st-key-msg_"] { max-width: 88%; width: fit-content; gap: .15rem; }
 [class*="st-key-msg_attacker"], [class*="st-key-msg_customer"] { align-self: flex-start; align-items: flex-start; }
@@ -189,7 +204,6 @@ ARENA = """
   display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .st-key-coach_avatar p { color: var(--accent-ink) !important; font-weight: 800; margin: 0; }
 [class*="st-key-world_"] { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: .6rem 1rem; margin-top: 1rem; gap: 0; }
-[class*="st-key-world_"] h3 { margin: 0; padding: 0; font-size: 1.1rem; }
 [class*="st-key-note_efficiency"] { border-left: 5px solid var(--accent); }
 [class*="st-key-note_clean"] { border-left: 5px solid var(--good); }
 .st-key-panel_report { gap: .9rem; }

@@ -17,7 +17,7 @@ os.environ["USE_FAKE_AI"] = "true"
 
 from engine.storage import build_row  # noqa: E402
 from test_arena import cheapest_perfect_set  # noqa: E402
-from ui import data, endless, levels, records, report, settings, store  # noqa: E402
+from ui import data, endless, icons, levels, records, report, settings, store  # noqa: E402
 from ui.map import STATES, build_map_svg, legend_svg, timeline_svg  # noqa: E402
 
 LEVEL = data.content.get_level("level_1")
@@ -78,6 +78,18 @@ def test_legend_and_timeline() -> None:
     svg = timeline_svg(log, 3)
     ET.fromstring(svg)
     assert svg.count("<rect") == 2 + sum(1 for entry in log if entry["type"] == "judge")
+
+
+# ---- icons ---------------------------------------------------------------------------------------
+
+def test_icons_are_valid_svg_and_escape_their_texts() -> None:
+    """Every icon is well formed, each business has one, and names and statuses in headings are escaped."""
+    for name in icons.PATHS:
+        ET.fromstring(icons.svg(name))
+    assert set(icons.WORLD_ICON) == set(data.content.world_order())
+    html = icons.status_heading("cafe", "<b>Bot</b>", "<script>x</script>")
+    assert "<b>Bot</b>" not in html and "<script>" not in html and "&lt;b&gt;" in html
+    ET.fromstring(f"<root>{icons.heading('dealer', 'A & B', 'x')}{icons.cost(3)}{icons.brand('Name')}</root>")
 
 
 # ---- the record board ---------------------------------------------------------

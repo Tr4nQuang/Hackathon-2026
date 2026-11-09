@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from ui import chat, common, data, guide
+from ui import chat, common, data, guide, icons
 
 PACKAGE_LETTERS = "ABCD"
 SHOP_NOTE = ("Each rule costs compute (⚡). Rules that do no work lower your grade, "
@@ -56,7 +56,7 @@ def rule_card(world: dict, card_id: str, try_no: int) -> None:
     with st.container(key=f"rcard_{card_id}"):
         name, cost = st.columns([5, 1], vertical_alignment="center")
         name.checkbox(card["label"], key=card_key(try_no, card_id))
-        cost.caption(f"{card['cost']}⚡")
+        cost.markdown(icons.cost(card["cost"]), unsafe_allow_html=True)
         st.write(card["text"])
 
 
@@ -66,7 +66,7 @@ def rules_panel(world: dict, attempt: dict, try_no: int) -> None:
     used = sum(data.content.get_card(card_id, world)["cost"] for card_id in chosen)
     with st.container(key="panel_rules"):
         with st.container(key="sec_rules"):
-            head, chip = st.columns([3, 2])
+            head, chip = st.columns([3, 2], vertical_alignment="center")
             head.subheader("Rule shop")
             chip.caption(f"{len(attempt['shop'])} rules")
             st.caption(SHOP_NOTE)
