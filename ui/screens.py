@@ -2,10 +2,9 @@
 
 import streamlit as st
 
-from ui import common, data, guide
+from ui import common, data, guide, progress
 from ui.common import PERSONAL_DATA_NOTICE, STAR
 from ui.map import build_map_svg, legend_svg
-from ui.playback import load_game_widget
 
 STATUS_TEXT = {"open": "▶ Open", "locked": "\U0001f512 Locked"}
 HERO_NOTE = "Every business, person and secret here is fictional. Level mode needs no AI and no key."
@@ -81,6 +80,28 @@ def grade_tiles() -> None:
             st.write(text)
 
 
+def clear_progress() -> None:
+    """Forget the saved stars in this session and in the browser."""
+    st.session_state.update(progress={}, confirm_reset=False)
+    progress.request_save()
+
+
+def continue_panel(levels: list[dict]) -> None:
+    """Show Continue with the saved stars, and a Start over link that asks once before clearing."""
+    stars = sum(st.session_state["progress"].values())
+    st.button(f"Continue · {stars}/{3 * len(levels)} {STAR}", type="primary", key="home_continue",
+              on_click=common.goto, args=("levels",), use_container_width=True)
+    if not st.session_state.get("confirm_reset"):
+        st.button("Start over", type="tertiary", key="home_start_over",
+                  on_click=lambda: st.session_state.update(confirm_reset=True))
+        return
+    st.caption("Clear your saved stars and locked levels in this browser?")
+    yes, cancel = st.columns(2)
+    yes.button("Yes, start over", key="home_reset_yes", on_click=clear_progress, use_container_width=True)
+    cancel.button("Cancel", key="home_reset_no", on_click=lambda: st.session_state.update(confirm_reset=False),
+                  use_container_width=True)
+
+
 def home_screen() -> None:
     """Show the pitch, the three game modes and how a round is graded."""
     scenario = common.get_scenario()
@@ -93,9 +114,12 @@ def home_screen() -> None:
             st.write("You are the blue team for a business chatbot. Write its rules, then watch attackers go after "
                      "what it knows while real customers still need answers. The closer to the core, the more it is "
                      "worth. Opening hours sit at the edge, admin passwords at the centre.")
+        saved = bool(st.session_state["progress"])
+        if saved:
+            continue_panel(levels)
         tutorial, play, endless = st.columns(3)
-        tutorial.button("Play the tutorial", type="primary", key="home_tutorial", on_click=start_tutorial,
-                        use_container_width=True)
+        tutorial.button("Play the tutorial", type="secondary" if saved else "primary", key="home_tutorial",
+                        on_click=start_tutorial, use_container_width=True)
         play.button("Level mode", key="home_play", on_click=common.goto, args=("levels",), use_container_width=True)
         endless.button("Endless mode", key="home_endless", on_click=common.goto, args=("endless_select",),
                        disabled=not sections, use_container_width=True)
@@ -117,7 +141,7 @@ def home_screen() -> None:
     st.write("Security is the share of secret points you kept. Helpfulness is the share of public questions "
              "answered. Refusing everything fails, and so does leaking.")
     grade_tiles()
-    load_game_widget("load_home")
+
 
 
 def level_card(levels: list[dict], index: int, progress: dict, first_open: int) -> None:

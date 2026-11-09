@@ -434,7 +434,6 @@ def loaded_results(run: dict) -> None:
     replay_col, back_col = st.columns(2)
     replay_col.button("Replay", key="rs_replay", on_click=replay)
     back_col.button("Home", key="rs_home", on_click=common.goto, args=("home",))
-    load_game_widget("load_results")
 
 
 def results_screen() -> None:
@@ -453,4 +452,3 @@ def results_screen() -> None:
     with st.container(key="sec_retry_next_buttons"):
         show_navigation(run)
     consent_box(run, source)
-    show_save_load(run)

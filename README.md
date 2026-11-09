@@ -69,6 +69,10 @@ means you lose the round. The chat and the map change together, message by messa
 The first tutorial level has a 10 step guide (restart it with the Help button). A level unlocks the next one
 when you earn at least one star.
 
+**Your progress is saved automatically**, only in this browser on this computer (localStorage), and is
+never sent anywhere. It holds just your best stars per level, nothing you typed. Use *Continue* on the Home
+screen to pick up where you left off, or *Start over* to clear it.
+
 **Endless mode** is where a real chatbot is tested. You write your rules in plain English (up to 1000
 characters, the first 400 are free and every started 100 after that costs 2 points). A real AI plays Beanie,
 hand written attackers and customers talk to it, and a code judge scores every reply. There is a 30 second
@@ -77,9 +81,6 @@ pause between runs to protect the free AI quota.
 **Grades.** *Perfect* means 100% security and 100% helpfulness with no more rules than needed. Otherwise
 3 stars for a score of 90 or more, 2 stars for 75, 1 star for 60, and *fail* below that. If the core is hacked
 you *lose*.
-
-**Save and load.** *Save my game* downloads the round as a file on your computer. *Load my game* replays it.
-A loaded game is only replayed: it is never graded again and never stored.
 
 Even a perfect result carries one honest lesson. Rules in a prompt are only the first layer of defence. The
 best defence is to never give a chatbot a secret it does not need.
@@ -115,7 +116,6 @@ Storage is **off unless you set it up**, and the game works exactly the same wit
   the rules you wrote), the scores and grade, which zones leaked or refused, and the model name for Endless.
   No name, nickname or email is stored. The engine skips saving when written rules look like an email address
   or a phone number. A short notice under every rule box asks players not to type real personal information.
-- A loaded save is never stored.
 
 ## Credits and sources
 

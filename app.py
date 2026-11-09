@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from ui import common, data, endless, playback, screens, shell, theme
+from ui import common, data, endless, playback, progress, screens, shell, theme
 
 st.set_page_config(page_title="Chatbot Defense Arena", page_icon="\U0001f6e1️", layout="wide")
 
@@ -30,9 +30,11 @@ def init_state() -> None:
 
 
 init_state()
+progress.load_saved_progress({level["id"] for level in common.get_scenario()["levels"]})
 theme.apply_theme()
 shell.topbar()
 if st.session_state.get("shown_screen") != st.session_state["screen"]:
     st.session_state["shown_screen"] = st.session_state["screen"]
     common.scroll_to_top()
 SCREENS.get(st.session_state["screen"], screens.home_screen)()
+progress.write_pending_progress()
