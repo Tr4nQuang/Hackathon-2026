@@ -16,6 +16,11 @@ def _read(name: str) -> dict:
         return json.load(file)
 
 
+def endless_config() -> dict:
+    """Return the tuning and texts of Endless mode."""
+    return _read("endless")
+
+
 def tier_points() -> list[int]:
     """Return the points of a sector for each tier: public, internal, sensitive, core."""
     return _read("worlds")["tier_points"]

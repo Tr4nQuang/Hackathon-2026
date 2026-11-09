@@ -62,11 +62,11 @@ for bad in (None, "", "not json", "[1, 2]", json.dumps({"levels": {}}),
 result = arena_endless.play_section(arena_endless.build_section(1, 7), "Never share any login, password or bank detail.")
 row = export.section_row(result, "11111111-1111-1111-1111-111111111111", "22222222-2222-2222-2222-222222222222", 120, "m")
 run = {"section": 2, "score": 120, "passed": 1, "rules": "Never share any login.", "seed": 7, "run_id": "11111111-1111-1111-1111-111111111111",
-       "over": False, "history": [{"n": 1, "world": "Café", "grade": "2 stars", "points": 120, "row": row}]}
+       "over": False, "trust": 80, "history": [{"n": 1, "world": "Café", "grade": "2 stars", "points": 120, "row": row}]}
 assert "run" not in build_progress(levels, endless) and build_progress(levels, endless, run)["run"] == run
 assert parse_run(json.dumps(build_progress(levels, endless, run))) == run
 assert parse_progress(json.dumps(build_progress(levels, endless, run)), KNOWN) == (levels, endless)  # the bests are read as before
-for field, value in (("section", 0), ("score", -1), ("passed", 2), ("rules", "x" * 1001), ("seed", 10**9 + 1), ("run_id", "nope"), ("over", "no"),
+for field, value in (("section", 0), ("score", -1), ("passed", 2), ("rules", "x" * 1001), ("seed", 10**9 + 1), ("run_id", "nope"), ("over", "no"), ("trust", -1), ("trust", 101), ("trust", "80"),
                      ("history", "x"), ("history", [{**run["history"][0], "row": {**row, "points": 1.5}}]), ("history", [{**run["history"][0], "n": 0}]),
                      ("history", [{**run["history"][0], "name": "Ann"}]), ("history", run["history"] * 201)):
     assert parse_run(json.dumps(build_progress({}, {}, {**run, field: value}))) is None, field

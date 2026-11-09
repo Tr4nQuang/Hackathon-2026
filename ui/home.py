@@ -12,7 +12,8 @@ HERO_NOTE = ("Every business, person and secret is fictional. The tutorial and L
              "uses a live AI when USE_FAKE_AI=false and a Gemini key is set; otherwise it uses built-in attack scripts.")
 GRADING_TEXT = ("Security is the share of attacked points you kept. Helpfulness is the share of public questions answered. "
                 "Your overall score is the points you kept and served, minus 14% of the round's points for every ⚡ that "
-                "did no work. The report never says which rules were the extra ones.")
+                "did no work. Leaks cap the grade whatever the score: an internal leak means 2 stars at most, and leaking personal "
+                "data, money or doing a forbidden action fails the round. The report never says which rules were the extra ones.")
 
 
 def mode_card(key: str, eyebrow: str, title: str, text: str, left: str, right: str) -> None:
@@ -34,10 +35,11 @@ def grade_tiles() -> None:
     """Show how a round is graded: Perfect, three star levels and a fail."""
     stars = dict(data.grade.STAR_THRESHOLDS)
     tiles = [("perfect", "**Perfect**", "100% security, 100% helpfulness, no wasted compute"),
-             ("s3", star_title(3), f"Overall score {stars[3]}% or more"), ("s2", star_title(2), f"Overall score {stars[2]}% or more"),
+             ("s3", star_title(3), f"Overall score {stars[3]}% or more, and nothing leaked"),
+             ("s2", star_title(2), f"Overall score {stars[2]}% or more. An internal leak caps you here"),
              ("s1", star_title(1), f"Overall score {stars[1]}% or more, with security at least {data.grade.PASS_SECURITY}% and "
                                    f"helpfulness at least {data.grade.PASS_HELPFULNESS}%. Still a pass."),
-             ("fail", "**Fail**", "Below that, or a breached core, which is an instant loss.")]
+             ("fail", "**Fail**", "Below that, or any leak of personal data, money or a forbidden action. A breached core is an instant loss.")]
     for column, (key, title, text) in zip(st.columns(len(tiles)), tiles):
         with column, st.container(key=f"gtile_{key}"):
             st.markdown(title)
@@ -53,7 +55,7 @@ def continue_panel(cleared: int, total: int) -> None:
               on_click=common.goto, args=("levels",), use_container_width=True)
     saved = state.get("saved_run")
     if saved:
-        st.button(f"Continue your Endless run · section {saved['section']} · {saved['score']} points" if not saved["over"] else
+        st.button(f"Continue your Endless run · shift {saved['section']} · {saved['score']} points · trust {saved['trust']}" if not saved["over"] else
                   f"See your last Endless run · {saved['score']} points", key="home_resume_run", on_click=endless.resume_run,
                   use_container_width=True)
     if sections:
@@ -101,8 +103,8 @@ def home_screen() -> None:
                   "Every try brings a new shop and new attack scripts, and rules that do no work cost you stars.",
                   "Café · Dealership · University", f"{cleared}/{len(levels)} cleared")
     with third:
-        mode_card("endless", "Endless mode", "How long can you hold?", "Write your own rules. The attacker picks a new target "
-                  "every section and gets sharper. One failed section ends the run.",
+        mode_card("endless", "Endless mode · Siege", "How long can you hold?", "Guard a live chat, shift after shift. Your rules "
+                  "must fit a shrinking word budget, visitors don't say who they are, and the attackers adapt to what you left out.",
                   "Live AI ready" if data.live.is_live() else "Built-in scripts", f"Top score {top}" if top else "No records yet")
     common.eyebrow("Grading", "grading")
     st.subheader("Security and helpfulness, both at once")

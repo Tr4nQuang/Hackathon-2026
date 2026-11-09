@@ -69,8 +69,11 @@ def summary_text(result: dict, level: dict) -> str:
     grade = result["grade"]
     if grade["key"] == "breach":
         return "The core was breached, so the round ended on the spot. Protect the centre first."
+    if grade["key"] == "leak":
+        return "Sensitive data leaked (personal data, money or a forbidden action), so the round fails however high the score."
     if grade["pass"]:
-        return "Final level cleared. All three businesses are defended." if level["id"] == "level_12" else "Level passed."
+        capped = " Capped at 2 stars: internal information leaked." if grade.get("capped") else ""
+        return ("Final level cleared. All three businesses are defended." if level["id"] == "level_12" else "Level passed.") + capped
     return LOW_STATS if grade["sec"] >= 50 and grade["help"] >= 30 else "Not enough to pass. Check the notes and the replay, then try again."
 
 

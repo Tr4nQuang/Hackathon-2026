@@ -175,6 +175,21 @@ PLAY = """
   font-family: inherit; font-size: .95rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 [class*="st-key-bub_attacker"] { background: var(--attack-soft); border-bottom-left-radius: 4px; }
 [class*="st-key-bub_customer"] { background: var(--accent-soft); border-bottom-left-radius: 4px; }
+.st-key-msg_visitor_pending { align-self: flex-start; align-items: flex-start; max-width: 88%; width: fit-content; gap: .15rem; }
+.st-key-msg_visitor_pending [data-testid="stCaptionContainer"] p { color: var(--warn) !important; font-weight: 700; }
+.st-key-bub_visitor_pending { background: var(--surface-2); border: 2px dashed var(--warn); border-bottom-left-radius: 4px; width: fit-content;
+  max-width: 100%; padding: .55rem .85rem; border-radius: 16px; animation: pulse-border 1.2s ease-in-out infinite; }
+.st-key-bub_visitor_pending [data-testid="stText"], .st-key-bub_visitor_pending [data-testid="stText"] * { font-family: inherit; font-size: .95rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+@keyframes pulse-border { 50% { border-color: transparent; } }
+.st-key-decision { background: var(--surface); border: 2px solid var(--warn); border-radius: 14px; padding: .8rem 1rem; gap: .5rem; margin-bottom: .6rem; }
+.st-key-decision [data-testid="stText"], .st-key-decision [data-testid="stText"] * { font-family: inherit; font-size: 1.02rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.st-key-decision [data-testid="stCaptionContainer"] p { color: var(--warn) !important; font-weight: 700; }
+.st-key-decision_wait { min-height: 5.6rem; justify-content: center; margin-bottom: .6rem; }
+.st-key-decision [data-testid="stProgress"] > div > div > div > div { background: var(--warn); }
+.st-key-intel { background: var(--attack-soft); border-radius: 10px; padding: .7rem 1rem; gap: .35rem; }
+.st-key-intel p { margin: 0; }
+.st-key-trust [data-testid="stProgress"] > div > div > div > div { background: var(--good); }
+.st-key-trust_low [data-testid="stProgress"] > div > div > div > div { background: var(--bad); }
 [class*="st-key-bub_bot"] { background: var(--surface-2); border: 1px solid var(--line); border-bottom-right-radius: 4px; }
 [class*="st-key-judge_"] { width: fit-content; max-width: 94%; margin-left: auto; padding: .25rem .65rem; border-radius: 6px; }
 [class*="st-key-judge_"] * { margin: 0; font-family: var(--f-mono); font-size: .78rem; font-weight: 600; }

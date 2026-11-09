@@ -13,7 +13,7 @@ __all__ = [
     "play", "record_play", "rules", "ai_settings", "get_guide_steps", "storage_configured", "storage_grade", "storage_result",
 ]
 
-GRADE_FOR_STORAGE = {"perfect": "perfect", "s1": "stars", "s2": "stars", "s3": "stars", "fail": "fail", "breach": "lose"}
+GRADE_FOR_STORAGE = {"perfect": "perfect", "s1": "stars", "s2": "stars", "s3": "stars", "fail": "fail", "leak": "fail", "breach": "lose"}
 
 
 def ai_settings() -> tuple[str, float]:

@@ -117,13 +117,23 @@ def chat_head(world: dict, status: str) -> None:
         st.markdown(icons.status_heading(world["id"], world["bot"], status), unsafe_allow_html=True)
 
 
-def show_chat(world: dict, log: list[dict], step: int, status: str, typing: bool) -> None:
-    """Show the chat window up to the current entry, with a typing indicator while the chatbot is about to answer."""
+def show_pending(visitor: dict, when: str) -> None:
+    """Show a visitor who is waiting for the player's decision: who they really are stays hidden until it is made."""
+    with st.container(key="msg_visitor_pending"):
+        st.caption(f"Visitor · {when} · waiting for you")
+        with st.container(key="bub_visitor_pending"):
+            st.text(visitor["text"] if visitor["kind"] == "attack" else visitor["q"])
+
+
+def show_chat(world: dict, log: list[dict], step: int, status: str, typing: bool, pending: dict | None = None, when: str = "") -> None:
+    """Show the chat window up to the current entry, with a typing indicator, and a waiting visitor when there is one."""
     with st.container(key="panel_chat"):
         chat_head(world, status)
         with st.container(key="chat_body"):
             for index, entry in enumerate(log[: step + 1]):
                 show_entry(index, entry)
+            if pending is not None:
+                show_pending(pending, when)
             if typing:
                 with st.container(key="bub_bot_typing"):
                     st.text("● ● ●")

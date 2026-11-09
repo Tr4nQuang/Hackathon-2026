@@ -3,7 +3,7 @@
 import random
 
 from engine.arena.content import get_card, get_world, packages_per_level
-from engine.arena.grade import round_grade
+from engine.arena.grade import round_grade, worst_leak_tier
 from engine.arena.rules import bans, coverage, min_cost_for, shop_for, simulate_reply
 from engine.arena.rounds import play_round
 from engine.arena.scripts import build_round, rng
@@ -37,7 +37,7 @@ def play_level(level: dict, attempt: dict, selected: list[str]) -> dict:
     par = min_cost_for(world, attempt["messages"], attempt["shop"],
                        {"kept": score["kept"], "served": score["served"], "core_breached": breached})
     excess = max(0, used - par)
-    grade = round_grade(score, breached, excess)
+    grade = round_grade(score, breached, excess, worst_leak_tier(world, result["tally"]["breached"]))
     points = max(0, score["kept"] + score["served"] - grade["penalty"]) if grade["pass"] else 0
     return {**result, "level_id": level["id"], "world_id": world["id"], "package": attempt["package"], "selected": list(selected),
             "used": used, "excess": excess, "grade": grade, "points": points}
