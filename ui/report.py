@@ -6,8 +6,8 @@ from ui import common, data, guide
 from ui.common import STAR
 
 GREAT_RULES_TIP = "Even great rules can fail. Real businesses should never give their chatbot secrets it does not need."
-CONSENT_TEXT = ("Share my anonymous results to help research: scores, the rules I wrote, my block choices and, with live AI, "
-                "the chat messages. No name is saved, and email addresses or phone numbers are removed.")
+CONSENT_TEXT = ("Share my anonymous results to help research: scores, the rules I wrote, my block choices and the chat of each "
+                "shift (attacks and replies). No name is saved, and email addresses or phone numbers are removed.")
 
 
 def defense_names(kinds: list[str]) -> str:

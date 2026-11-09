@@ -489,7 +489,7 @@ def test_consent_is_off_by_default_and_records_once() -> None:
         assert uuid.UUID(call["run_id"]) and uuid.UUID(call["session_id"])
         row = build_row(**call)
         assert row["mode"] == "level" and row["player_rules"] == result["rules"] and row["visits"] and row["word_budget"]
-        assert all(v["text"] is None for v in row["visits"])  # a level never uses live AI, so no chat text is stored
+        assert all(v["text"] and v["written_by"] == "script" for v in row["visits"])  # the attack scripts are stored too
         assert any("was saved" in c.value for c in at.caption)
         at.checkbox(key=f"consent_{run_id}").uncheck().run()
         at.checkbox(key=f"consent_{run_id}").check().run()

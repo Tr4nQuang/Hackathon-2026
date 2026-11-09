@@ -5,7 +5,7 @@ import streamlit as st
 from ui import common, progress
 
 SPEEDS = ("normal", "fast", "instant")
-PROGRESS_NOTE = ("Level stars, best scores and Endless section bests are saved only in this browser on this computer, "
+PROGRESS_NOTE = ("Level stars, best scores and Endless shift bests are saved only in this browser on this computer, "
                  "and never sent anywhere.")
 
 

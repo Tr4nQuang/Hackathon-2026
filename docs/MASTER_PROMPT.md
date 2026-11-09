@@ -91,7 +91,7 @@ new_session_id(), build_row(...), record_play(mode, scenario_id, level_id, run_i
 Since engine_version 3.0.0 (live shifts): tutorial and level rows may carry player_rules too (the text the player wrote; chosen_rules
 holds the defenses read from it), and build_row also reads these optional keys from result: words, budget, blocks_used, catches,
 blocked_customers, vip_lost, trust_after (Endless only), live and visits (one record per visitor from engine/arena/rounds.py:
-kind, technique, target, vip, decision, seconds, outcome, leaked, offline, text, reply). Texts are kept only for live AI, scrubbed.
+kind, technique, target, vip, written_by ("script" or "ai"), decision, seconds, outcome, leaked, offline, text, reply). Texts are scrubbed.
 
 ## 5. Phases
 
