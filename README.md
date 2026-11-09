@@ -193,6 +193,19 @@ Storage is **off unless you set it up**, and the game works exactly the same wit
   No name, nickname or email is stored. The engine skips saving when written rules look like an email address
   or a phone number. A short notice under every rule box asks players not to type real personal information.
 
+## What's next
+
+1. **Put it online.** The game already runs for free with no API key, so it can be hosted on a free Streamlit server
+   and shared as a link.
+2. **Pilot it and measure learning.** Try it with local business owners and front-line staff, with a short quiz before
+   and after playing. The consent-based research storage that would record the results is already built.
+3. **Audit real chatbots.** The engine keeps the attacker, the chatbot and the judge separate, so the same attack
+   scripts and code judge could be pointed at a business's own chatbot to produce a report.
+
+Constraints we planned for: cost (free without AI; the live mode uses low-cost Gemini Flash-Lite models first),
+privacy (opt-in only, no names, contact details removed) and realism (the simulated chatbot always obeys a rule that
+covers an attack, while a real model does not, which is why the live AI mode exists).
+
 ## Credits and sources
 
 - **Team.** Built during natHacks 2026 (November 6 to 9) at the University of Alberta.
