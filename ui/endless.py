@@ -7,7 +7,7 @@ import uuid
 
 import streamlit as st
 
-from ui import chat, common, data, play, records, report, store
+from ui import chat, common, data, play, progress, records, report, store
 
 COOLDOWN_SECONDS = 30
 RULES_BOX_HEIGHT = 190
@@ -144,6 +144,7 @@ def run_section() -> None:
     result = data.endless.play_section(section, run["rules"], data.live.ai_reply if section["live"] else None)
     state["endless_last_run"] = time.monotonic()
     add_result(run, result)
+    progress.record_section(result["section"], result["points"], result["grade"]["pass"])
     common.start_playback()
 
 
@@ -186,6 +187,9 @@ def lobby_screen() -> None:
                  f"({data.endless.WORD_BONUS_BASE} minus your word count).")
         top = store.top_score()
         st.write(f"Top score on the board: **{top}**." if top else "The record board is empty. Set the first score.")
+        score, cleared = progress.endless_totals(st.session_state.get("endless_best", {}))
+        if cleared:
+            st.write(f"Saved in this browser: **Score {score} · Cleared {cleared}** (best points of each section you cleared).")
 
 
 def end_confirm(run: dict) -> None:
