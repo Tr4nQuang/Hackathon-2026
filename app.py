@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from ui import common, data, endless, home, levels, play, records, report, settings, shell, theme
+from ui import common, data, endless, home, levels, play, progress, records, report, settings, shell, theme
 
 st.set_page_config(page_title="Chatbot Defense Arena", page_icon="\U0001f6e1️", layout="wide")
 
@@ -21,7 +21,7 @@ SCREENS = {
 def init_state() -> None:
     """Set the session defaults once."""
     defaults = {"screen": "home", "level_id": None, "attempt": None, "result": None, "try_no": 0, "last_package": {},
-                "progress": {}, "attempts": {}, "speed": "normal", "endless": None, "confirm_reset": False,
+                "progress": {}, "endless_best": {}, "attempts": {}, "speed": "normal", "endless": None, "confirm_reset": False,
                 "player_name": "",
                 "pb_step": 0, "pb_playing": False, "pb_last": 0.0,
                 "replay_log": None, "replay_world": None, "replay_back": "home",
@@ -33,9 +33,11 @@ def init_state() -> None:
 
 
 init_state()
+progress.load_saved_progress({level["id"] for level in data.content.get_levels()} | {"tutorial"})
 theme.apply_theme()
 shell.topbar()
 if st.session_state.get("shown_screen") != st.session_state["screen"]:
     st.session_state["shown_screen"] = st.session_state["screen"]
     common.scroll_to_top()
 SCREENS.get(st.session_state["screen"], home.home_screen)()
+progress.write_pending_progress()
