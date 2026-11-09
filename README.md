@@ -2,7 +2,7 @@
 
 natHacks 2026, Standard Division, Defense and Security theme.
 
-Try it at https://chatbot-defense-arena.streamlit.app
+Try it at https://hackathon-2026-7ksa8d3gp6yrqqyjkb6rzu.streamlit.app
 
 In this game you protect a small business's chatbot. People keep messaging it. Some are customers asking about
 opening hours or the menu, and some are attackers trying to get it to leak the staff schedule, the bank account or
