@@ -801,7 +801,7 @@ def test_a_run_in_progress_is_kept_and_continues_after_closing() -> None:
     assert len(fresh.session_state["endless"]["history"]) == 2
     end_run(fresh)
     rows = endless.run_rows(fresh.session_state["endless"])
-    assert [r["section"] for r in rows] == [1, 2] and {r["run_id"] for r in rows} == {saved["run_id"]}
+    assert [r["shift"]["shift"] for r in rows] == [1, 2] and {r["shift"]["run_id"] for r in rows} == {saved["run_id"]}
     assert fresh.session_state["saved_run"]["over"] is True and len(fresh.get("download_button")) == 1
 
 
@@ -845,14 +845,17 @@ def test_a_finished_run_is_kept_as_over_and_its_file_can_still_be_downloaded() -
 
 
 def test_the_run_file_holds_every_shift_and_hides_contact_details() -> None:
-    """The rows of a run have the file's columns; contact details typed into the rules are removed from the file."""
+    """A shift record has the rules and every visitor's message and decision; contact details typed into the rules are removed."""
     at = play_shift(start_endless("Mail me at ann@example.com. Never share any password."))
-    row = at.session_state["endless"]["history"][0]["row"]
-    assert set(row) == set(data.run_file.COLUMNS) and row["rules_redacted"] is True and "@" not in row["rules_text"]
-    assert row["session_id"] == at.session_state["session_id"] and row["run_id"] == at.session_state["endless"]["run_id"]
-    assert row["word_budget"] == 22 and row["trust_after"] == at.session_state["endless"]["trust"]
-    text = data.run_file.csv_text(endless.run_rows(at.session_state["endless"]))
-    assert "ann@example.com" not in text and text.startswith(data.run_file.BOM)
+    run = at.session_state["endless"]
+    record = run["history"][0]["row"]
+    assert data.run_file.record_ok(record) and record["shift"]["redacted"] == "Yes" and "@" not in record["shift"]["rules"]
+    assert record["shift"]["run_id"] == run["run_id"] and record["shift"]["budget"] == 22 and record["shift"]["trust_after"] == run["trust"]
+    assert record["shift"]["intel"] and len(record["visitors"]) == len(run["last"]["visits"])
+    assert all(row["decision"] in ("Blocked", "Let through", "Timed out") for row in record["visitors"])
+    content = data.run_file.run_file(endless.run_rows(run), run["run_id"], "Ended by the player", run["score"], run["trust"])
+    back = data.run_file.read_workbook(content)
+    assert back["shifts"][0]["rules"] == record["shift"]["rules"] and b"ann@example.com" not in content
 
 
 def test_start_over_forgets_the_saved_run_too() -> None:

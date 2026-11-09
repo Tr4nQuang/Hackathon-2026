@@ -46,8 +46,8 @@ def run_is_over(run: dict) -> bool:
     return run["trust"] <= 0 or bool(run["last"] and run["last"]["tally"]["core_breached"])
 
 
-def add_result(run: dict, result: dict, session_id: str | None = None) -> None:
-    """Add a played shift to the run: its history row (with its run file row), the score, the cleared count and the trust."""
+def add_result(run: dict, result: dict) -> None:
+    """Add a played shift to the run: its history row (with its run file record), the score, the cleared count and the trust."""
     grade = result["grade"]
     result["run_id"] = str(uuid.uuid4())
     if grade["pass"]:
@@ -55,8 +55,8 @@ def add_result(run: dict, result: dict, session_id: str | None = None) -> None:
         run["passed"] += 1
     result["trust_before"] = run["trust"]
     run["trust"] = max(0, data.endless.next_trust(run["trust"], result))
-    row = data.run_file.section_row(result, run["run_id"], session_id or str(uuid.uuid4()), run["score"], data.live.model_name(),
-                                    trust_after=run["trust"])
+    section = run["cur"] if run.get("cur") and run["cur"]["number"] == result["section"] else None
+    row = data.run_file.shift_record(result, section, run["run_id"], run["score"], result["trust_before"], run["trust"])
     run["history"].append({"n": result["section"], "world": data.content.get_world(result["world_id"])["short"],
                            "grade": grade["label"], "points": result["points"], "result": result, "row": row})
     run["last"] = result
@@ -80,7 +80,7 @@ def run_from_saved(saved: dict) -> dict:
 
 
 def run_rows(run: dict) -> list[dict]:
-    """Return the run file rows of every shift of a run (also those played before the game was closed)."""
+    """Return the run file records of every shift of a run (also those played before the game was closed)."""
     return [row["row"] for row in run["history"]]
 
 
@@ -111,7 +111,7 @@ def storage_calls(run: dict) -> list[dict]:
     for row in played_rows(run):
         result = row["result"]
         calls.append({"mode": "endless", "scenario_id": "arena", "level_id": f"endless_{result['world_id']}", "run_id": result["run_id"],
-                      "attempt_number": result["section"], "result": {**data.storage_result(result), "trust_after": row["row"]["trust_after"]}, "grade": data.storage_grade(result),
+                      "attempt_number": result["section"], "result": {**data.storage_result(result), "trust_after": row["row"]["shift"]["trust_after"]}, "grade": data.storage_grade(result),
                       "player_rules": result["rules"], "ai_model": model if result["live"] else "fake-ai", "ai_temperature": temperature})
     return calls
 
@@ -193,9 +193,9 @@ def start_shift() -> None:
 
 def end_shift() -> None:
     """Grade the finished shift, update score and trust, save the run and open the report."""
-    state, run = st.session_state, current()
+    run = current()
     result = data.endless.finish_shift(run["shift"])
-    add_result(run, result, state["session_id"])
+    add_result(run, result)
     run.update(shift=None, status="report")
     progress.save_run(snapshot(run))
     progress.record_section(result["section"], result["points"], result["grade"]["pass"])
@@ -415,17 +415,27 @@ def consent_box(run: dict) -> None:
         st.caption("Thank you, your anonymous results were saved." if run["stored"] else "Storage is not set up here, so nothing was saved.")
 
 
-ADMIN_NOTE = ("Want to help the admin? Download this file and send it to them (for example by email). It has one line per shift: "
-              "the rules you wrote, your grades, your blocks and which parts leaked. It has no name, and email addresses and phone "
-              "numbers in your rules are removed. Nothing is sent from here: you decide whether to send the file.")
+ADMIN_NOTE = ("Want to help the admin? Download this Excel file and send it to them (for example by email). It shows every "
+              "shift: the intel, the rules you wrote and what they missed; and every visitor: the attacker's message, what you "
+              "decided and how fast, the chatbot's reply and what leaked. It has no name, and email addresses and phone numbers are "
+              "removed. Nothing is sent from here: you decide whether to send the file.")
+ENDED_FOR_ADMIN = {"The core was breached.": "Core breached", "Trust ran out.": "Trust ran out", "You ended the run.": "Ended by the player"}
+PREVIEW_COLUMNS = (("shift", "Shift"), ("who", "Who"), ("technique", "Technique"), ("message", "Message"), ("decision", "Your call"),
+                   ("reply", "Chatbot's reply"), ("outcome", "Outcome"))
 
 
 def admin_file(run: dict) -> None:
-    """Show the run as a CSV file to download and send to the admin (nothing leaves the game unless the player sends it)."""
+    """Offer the run as an Excel file to send to the admin, with a preview (nothing leaves the game unless the player sends it)."""
+    records = run_rows(run)
     st.markdown("**Send your run to the admin**")
     st.caption(ADMIN_NOTE)
-    st.download_button("Download run file (CSV)", data=data.run_file.csv_text(run_rows(run)), file_name=data.run_file.file_name(run["run_id"]),
-                       mime="text/csv", key="e_download")
+    content = data.run_file.run_file(records, run["run_id"], ENDED_FOR_ADMIN.get(over_reason(run), "Ended by the player"),
+                                     run["score"], run["trust"])
+    st.download_button("Download run file (Excel)", data=content, file_name=data.run_file.file_name(run["run_id"]),
+                       mime=data.run_file.MIME, key="e_download")
+    with st.expander("Preview: every visitor in the file"):
+        st.dataframe([{label: row[key] for key, label in PREVIEW_COLUMNS} for record in records for row in record["visitors"]],
+                     hide_index=True, width="stretch")
 
 
 def over_reason(run: dict) -> str:

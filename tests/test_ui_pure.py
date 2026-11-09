@@ -223,7 +223,7 @@ def test_a_run_adds_up_only_passed_sections() -> None:
     assert not lost["grade"]["pass"]
     endless.add_result(run, lost)
     assert (run["score"], run["passed"]) == (won["points"], 1) and [row["n"] for row in run["history"]] == [1, 2]
-    assert run["trust"] < 100 and lost["trust_before"] == 100 and run["history"][1]["row"]["trust_after"] == run["trust"]
+    assert run["trust"] < 100 and lost["trust_before"] == 100 and run["history"][1]["row"]["shift"]["trust_after"] == run["trust"]
     assert won["run_id"] != lost["run_id"] and run["history"][0]["world"] == data.content.get_world(won["world_id"])["short"]
 
 

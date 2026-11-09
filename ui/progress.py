@@ -90,10 +90,10 @@ def _short_text(value: object, top: int) -> bool:
 
 
 def _valid_history_row(row: object) -> bool:
-    """Return True for {"n", "world", "grade", "points", "row"} with sane values and a valid run file row."""
+    """Return True for {"n", "world", "grade", "points", "row"} with sane values and a valid run file record."""
     return (isinstance(row, dict) and set(row) == HISTORY_KEYS and _count(row["n"], MAX_SECTION) and row["n"] >= 1
             and _short_text(row["world"], 40) and _short_text(row["grade"], 40) and _count(row["points"], MAX_POINTS)
-            and data.run_file.row_ok(row["row"]))
+            and data.run_file.record_ok(row["row"]))
 
 
 def _valid_run(run: object) -> bool:
