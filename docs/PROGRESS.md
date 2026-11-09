@@ -82,12 +82,14 @@ Branch james/arena-parity. The goal was to make the Streamlit game the same game
 ### What changed
 - engine/arena/ is a pure Python port of the demo: worlds with four rings (10/25/50/150 points), rule cards with the defenses they cover, bundles, topic bans and a lockdown card, per-try shops, a fast evaluator and a cheapest-perfect-set search, grading (waste share 14%, stars at 85/70/50, security 50 and helpfulness 30 to pass, a breached core is an instant loss), Endless sections, a plain English rules reader, and live AI helpers that go through call_ai(). Content is in scenarios/arena/*.json (a subfolder, so the earlier scenario loader and tests are untouched).
 - The interface is rebuilt around it: top bar, home, level map, rule shop with compute costs, System Core map with hours, deals, loyalty and the rest, the chat with judge lines, report notes, replay with a timeline, Endless (lobby, sections, section report, run over, record board), Records and Settings.
-- Kept from before and restyled: Save my game and Load my game, the tutorial guide (adapted to the compute mechanics), consent once per run with anonymous storage, replay speeds, the progress export and import.
+- Kept from before and restyled: the tutorial guide (adapted to the compute mechanics), consent once per run with anonymous storage, and replay speeds.
 
 ### Differences from the demo, on purpose
 - There is no API key field in the game. The key stays in .env (project rule). Settings only shows whether live AI and storage are set up, never a value.
 - The record board is a local file (data/records.json, git ignored), not a shared server board.
-- Level progress lasts for the browser session, with export and import in Settings, instead of localStorage.
+- Level progress lasts for the browser session (Settings can reset it) instead of localStorage.
+- The level map is the demo's winding path: numbered bubbles (locked, next, done, perfect), stars earned below, a dotted line through them and a banner for each business.
+- No JSON file upload or download anywhere. Save my game, Load my game and the progress export and import were removed (by request). engine/save.py is unchanged and still tested.
 - The 30 second pause between Endless runs only applies with live AI (it protects the free quota).
 - Notes name the missing defense on a leak, but never say which rules were unnecessary (as in the demo).
 

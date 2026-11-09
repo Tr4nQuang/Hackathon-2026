@@ -1,4 +1,4 @@
-"""Tests for the parts of the interface that need no browser: map drawing, local files, saves, notes and the Endless run.
+"""Tests for the parts of the interface that need no browser: map drawing, the level path, the record board, notes and the Endless run.
 
 Run: python tests/test_ui_pure.py
 """
@@ -17,7 +17,7 @@ os.environ["USE_FAKE_AI"] = "true"
 
 from engine.storage import build_row  # noqa: E402
 from test_arena import cheapest_perfect_set  # noqa: E402
-from ui import data, endless, records, report, saves, settings, store  # noqa: E402
+from ui import data, endless, levels, records, report, settings, store  # noqa: E402
 from ui.map import STATES, build_map_svg, legend_svg, timeline_svg  # noqa: E402
 
 LEVEL = data.content.get_level("level_1")
@@ -80,7 +80,7 @@ def test_legend_and_timeline() -> None:
     assert svg.count("<rect") == 2 + sum(1 for entry in log if entry["type"] == "judge")
 
 
-# ---- the record board and progress files ---------------------------------------------------------
+# ---- the record board ---------------------------------------------------------
 
 def use_temp_board() -> Path:
     """Point the record board at an empty file in a temporary folder and return its path."""
@@ -125,61 +125,39 @@ def test_board_rows_mark_the_player_and_stay_plain_text() -> None:
     assert [row["#"] for row in table] == [1, 2] and records.board_rows(rows, "")[1]["Player"] == "Ann"
 
 
-def test_progress_file_roundtrip_and_checks() -> None:
-    """Exported progress reads back; a wrong format, bad values or unknown levels are refused or ignored."""
-    ids = [level["id"] for level in data.content.get_levels()]
-    progress = {"tutorial": {"stars": 3, "best": 80, "perfect": True}, "level_2": {"stars": 1, "best": 20, "perfect": False}}
-    assert store.progress_from_json(store.progress_to_json(progress), ids) == progress
-    for bad in ("nope", "[]", json.dumps({"format": "other", "progress": {}}),
-                json.dumps({"format": "chatbot-defense-arena/progress-1", "progress": {"level_1": {"stars": 9, "best": 1}}}),
-                json.dumps({"format": "chatbot-defense-arena/progress-1", "progress": {"level_1": {"stars": 1, "best": -4}}})):
-        try:
-            store.progress_from_json(bad, ids)
-        except ValueError:
-            continue
-        raise AssertionError(f"accepted {bad!r}")
-    other = json.dumps({"format": "chatbot-defense-arena/progress-1", "progress": {"level_99": {"stars": 1, "best": 1}}})
-    assert store.progress_from_json(other, ids) == {}
+# ---- the level path ------------------------------------------------------------------------------
+
+def test_the_level_path_winds_through_every_level() -> None:
+    """Every level has a bubble in the middle half of the page, rows are evenly spaced, and a banner sits above each business."""
+    all_levels = data.content.get_levels()
+    points, height = levels.path_points(all_levels)
+    assert len(points) == len(all_levels) == 12 and all(24 <= x <= 76 for x, _ in points)
+    assert points[0][1] == levels.BANNER_PX + levels.DISC_CENTRE_PX
+    gaps = [b[1] - a[1] for a, b in zip(points, points[1:])]
+    assert set(gaps) == {levels.ROW_PX, levels.ROW_PX + levels.BANNER_PX}  # a business banner adds a row
+    assert gaps.count(levels.ROW_PX + levels.BANNER_PX) == len(data.content.world_order()) - 1
+    assert height == len(data.content.world_order()) * levels.BANNER_PX + len(all_levels) * levels.ROW_PX
 
 
-def test_merging_progress_keeps_the_better_of_each_level() -> None:
-    """Importing never lowers stars or scores and never loses a Perfect."""
-    mine = {"level_1": {"stars": 3, "best": 90, "perfect": False}, "level_2": {"stars": 1, "best": 50, "perfect": False}}
-    theirs = {"level_1": {"stars": 2, "best": 95, "perfect": True}, "level_3": {"stars": 1, "best": 10, "perfect": False}}
-    merged = store.merge_progress(mine, theirs)
-    assert merged["level_1"] == {"stars": 3, "best": 95, "perfect": True}
-    assert merged["level_2"] == mine["level_2"] and merged["level_3"] == theirs["level_3"]
-    assert mine["level_1"]["best"] == 90  # the inputs are left alone
+def test_the_level_path_line_and_positions() -> None:
+    """The dotted line is valid SVG with one curve per step, and every bubble has a left position rule."""
+    all_levels = data.content.get_levels()
+    points, height = levels.path_points(all_levels)
+    svg = levels.path_svg(points, height)
+    ET.fromstring(svg)
+    assert svg.count("C") == len(all_levels) - 1 and svg.count("M") == 1 and f'viewBox="0 0 100 {height}"' in svg
+    css = levels.position_css(len(all_levels))
+    assert css.count("left:") == len(all_levels) and ".st-key-lvl_11 { left:" in css
 
 
-# ---- saves ---------------------------------------------------------------------------------------
-
-def test_a_save_replays_and_bad_saves_are_refused() -> None:
-    """A real save reads back to the same log; missing, malformed or foreign saves raise ValueError."""
-    result = played()
-    record = data.import_game(data.export_game(saves.save_record(result, LEVEL)))
-    loaded = saves.replay_from_save(record)
-    assert loaded["log"] == result["log"] and loaded["world_id"] == LEVEL["world"]
-    log = result["log"]
-    broken = [{**record, "events": []}, {**record, "events": "x"}, {**record, "events": log[:3] + [{"type": "msg"}]},
-              {**record, "events": [{**log[0], "map": {"nope": "idle"}}, *log[1:]]}, {**record, "world_id": "mars"},
-              {**record, "events": [{**log[0], "map": {WORLD["sectors"][0]["id"]: "lost"}}, *log[1:]]},
-              {**record, "events": [{**log[0], "text": "x" * 5000}, *log[1:]]}]
-    for save in broken:
-        try:
-            saves.replay_from_save(save)
-        except ValueError:
-            continue
-        raise AssertionError("a bad save was accepted")
-
-
-def test_a_save_of_an_endless_section_keeps_the_rules() -> None:
-    """An Endless save has the written rules, no chosen cards, and replays too."""
-    section = data.endless.build_section(1, 7)
-    result = data.endless.play_section(section, "Never share any login or password.")
-    record = saves.save_record(result)
-    assert record["mode"] == "endless" and record["player_rules"] == "Never share any login or password." and record["chosen_rules"] is None
-    assert saves.replay_from_save(data.import_game(data.export_game(record)))["world_id"] == section["world_id"]
+def test_a_level_bubble_looks_like_its_state() -> None:
+    """Locked, perfect, done, next and open bubbles each have their own look."""
+    locked = {"unlocked": False, "perfect": False, "done": False}
+    assert levels.level_state_name(3, locked, 3) == "locked"
+    assert levels.level_state_name(3, {"unlocked": True, "perfect": True, "done": True}, -1) == "perfect"
+    assert levels.level_state_name(3, {"unlocked": True, "perfect": False, "done": True}, -1) == "done"
+    assert levels.level_state_name(3, {"unlocked": True, "perfect": False, "done": False}, 3) == "next"
+    assert levels.level_state_name(4, {"unlocked": True, "perfect": False, "done": False}, 3) == "open"
 
 
 # ---- report notes --------------------------------------------------------------------------------

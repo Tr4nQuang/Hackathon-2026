@@ -19,7 +19,7 @@ from streamlit.testing.v1 import AppTest  # noqa: E402
 
 from engine.storage import build_row  # noqa: E402
 from test_arena import cheapest_perfect_set  # noqa: E402
-from ui import chat, data, endless, guide, saves, store  # noqa: E402
+from ui import chat, data, endless, guide, store  # noqa: E402
 
 APP = str(ROOT / "app.py")
 STRONG_RULES = ("Never share any login, password or bank detail. Never reveal staff, student or customer details. Never reveal "
@@ -149,6 +149,33 @@ def test_levels_unlock_one_after_another() -> None:
     assert not at.button(key="play_level_2").disabled and at.button(key="play_level_3").disabled
 
 
+def test_levels_are_numbered_bubbles_with_stars_below() -> None:
+    """Each level is a bubble with its number; a locked one shows a lock, and a cleared one shows its stars below."""
+    at = new_app()
+    at.session_state["progress"] = {"level_1": {"stars": 3, "best": 90, "perfect": True},
+                                    "level_2": {"stars": 1, "best": 40, "perfect": False}}
+    click(at, "home_play")
+    assert [at.button(key=f"play_level_{n}").label for n in (1, 2, 3, 4)] == ["1", "2", "3", "\U0001f512"]
+    assert not at.button(key="play_level_3").disabled and at.button(key="play_level_4").disabled
+    stars = [c.value for c in at.caption if set(c.value) <= {"\u2605", "\u2606"} and c.value]
+    assert stars == ["\u2605\u2605\u2605", "\u2605\u2606\u2606"]  # only cleared levels show stars
+    assert any("Perfect" in m.value and "Level" not in m.value for m in at.markdown)
+    assert any("4/36 stars" in c.value for c in at.caption)
+    click(at, "play_level_3")
+    assert at.session_state["level_id"] == "level_3" and at.session_state["screen"] == "play"
+
+
+def test_there_are_no_file_uploads_or_downloads() -> None:
+    """The game has no save file buttons and no upload boxes on any screen."""
+    at = new_app()
+    for place in ("home", "levels", "endless", "records", "settings"):
+        click(at, f"nav_{place}")
+        assert not at.get("file_uploader") and not at.get("download_button"), place
+    report = at_report()
+    assert not report.get("file_uploader") and not report.get("download_button")
+    assert not [b for b in report.button if b.key in ("rp_save", "load_report")]
+
+
 def test_every_level_screen_opens_with_a_playable_shop() -> None:
     """Each of the 12 levels opens its setup screen with a shop, a map and the Run round button."""
     for level in data.content.get_levels():
@@ -256,7 +283,7 @@ def test_entry_timing_depends_on_who_speaks_and_how_much() -> None:
     assert chat.entry_delay({"type": "sys", "text": "x"}, None) == 0.5
 
 
-# ---- replay, save and load ------------------------------------------------------------------------
+# ---- replay ------------------------------------------------------------------------
 
 def test_the_replay_opens_from_the_report_and_goes_back() -> None:
     """Watch replay shows the same chat with full controls, and its button leads back to the report."""
@@ -267,40 +294,6 @@ def test_the_replay_opens_from_the_report_and_goes_back() -> None:
     assert at.button(key="replay_back_btn").label == "Back to report"
     click(at, "replay_back_btn")
     assert at.session_state["screen"] == "report"
-
-
-def test_a_saved_game_comes_back_as_a_replay() -> None:
-    """A save made from a report loads into the replay screen with a notice that it is not graded again."""
-    at = at_report()
-    result = at.session_state["result"]
-    loaded = saves.replay_from_save(data.import_game(data.export_game(saves.save_record(result, data.content.get_level("level_1")))))
-    fresh = new_app()
-    seed(fresh, replay_log=loaded["log"], replay_world=loaded["world_id"], replay_back="home", replay_loaded=True,
-                               screen="replay", pb_step=0, pb_playing=False)
-    fresh.run()
-    assert not fresh.exception and any("replay of a saved game" in i.value for i in fresh.info)
-    assert fresh.button(key="replay_back_btn").label == "Back"
-
-
-def test_a_loaded_game_is_never_graded_or_stored() -> None:
-    """Replaying a loaded game has no consent box and never calls record_play."""
-    log = at_report().session_state["result"]["log"]
-    with recording(True) as recorder:
-        at = new_app()
-        seed(at, replay_log=log, replay_world="cafe", replay_back="home", replay_loaded=True, screen="replay",
-                                pb_step=len(log) - 1, pb_playing=False)
-        at.run()
-        assert not at.exception and not at.checkbox and recorder.calls == []
-
-
-def test_a_replay_of_a_save_without_rules_still_works() -> None:
-    """A hand made save with only the events replays without an error."""
-    log = at_report().session_state["result"]["log"]
-    loaded = saves.replay_from_save({"events": log, "world_id": "cafe"})
-    at = new_app()
-    seed(at, replay_log=loaded["log"], replay_world=loaded["world_id"], screen="replay", pb_step=3, pb_playing=False)
-    at.run()
-    assert not at.exception and at.session_state["screen"] == "replay"
 
 
 # ---- the tutorial guide --------------------------------------------------------------------------

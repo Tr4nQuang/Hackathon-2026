@@ -27,7 +27,7 @@ costs compute, so "refuse everything" and "switch on everything" never win.
 
 | | |
 |---|---|
-| ![Home: the pitch, the three game modes and an example System Core map](docs/screenshots/01-home.png) | ![Level map: three businesses, twelve levels](docs/screenshots/06-levels.png) |
+| ![Home: the pitch, the three game modes and an example System Core map](docs/screenshots/01-home.png) | ![Level map: a winding path of numbered bubbles, stars earned below each](docs/screenshots/06-levels.png) |
 | ![The tutorial guide highlights one part of the screen and dims the rest](docs/screenshots/02-tutorial-guide.png) | ![Playback: your rules, the System Core map and the chat change together](docs/screenshots/03-playback.png) |
 | ![Report: grade, scores and what got through](docs/screenshots/04-results.png) | ![Endless mode: write your rules in plain English](docs/screenshots/05-endless.png) |
 | ![Settings: chat speed, progress, AI connection](docs/screenshots/07-settings.png) | |
@@ -88,9 +88,8 @@ score gives 3 stars at 85%, 2 stars at 70% and 1 star at 50%, as long as securit
 helpfulness at least 30%. Every ⚡ that did no work costs 14% of the round's points. A breached core is an
 instant loss.
 
-**Save and load.** *Save my game* downloads the round as a file on your computer. *Load my game* replays it.
-A loaded game is only replayed: it is never graded again and never stored. *Settings* can also export and
-import your level progress, because progress lasts only as long as the browser tab.
+**Progress.** Level stars and best scores last for the browser session (Settings can reset them). Finished Endless
+runs can be saved to the record board on your computer.
 
 Even a perfect result carries one honest lesson. Rules in a prompt are only the first layer of defence. The
 best defence is to never give a chatbot a secret it does not need.
@@ -129,7 +128,6 @@ Storage is **off unless you set it up**, and the game works exactly the same wit
   the rules you wrote, one row per section), the scores and grade, which zones leaked or refused, and the model name for Endless.
   No name, nickname or email is stored. The engine skips saving when written rules look like an email address
   or a phone number. A short notice under every rule box asks players not to type real personal information.
-- A loaded save is never stored.
 
 ## Credits and sources
 
