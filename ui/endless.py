@@ -111,7 +111,7 @@ def storage_calls(run: dict) -> list[dict]:
     for row in played_rows(run):
         result = row["result"]
         calls.append({"mode": "endless", "scenario_id": "arena", "level_id": f"endless_{result['world_id']}", "run_id": result["run_id"],
-                      "attempt_number": result["section"], "result": data.storage_result(result), "grade": data.storage_grade(result),
+                      "attempt_number": result["section"], "result": {**data.storage_result(result), "trust_after": row["row"]["trust_after"]}, "grade": data.storage_grade(result),
                       "player_rules": result["rules"], "ai_model": model if result["live"] else "fake-ai", "ai_temperature": temperature})
     return calls
 

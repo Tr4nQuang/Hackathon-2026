@@ -213,14 +213,14 @@ def shift_pending(shift: dict) -> dict | None:
     return rounds.pending(shift["round"])
 
 
-def shift_step(shift: dict, block: bool = False) -> None:
-    """Decide on the waiting visitor: block it (if a block is left) or let the chatbot answer."""
+def shift_step(shift: dict, block: bool = False, how: str | None = None, seconds: float | None = None) -> None:
+    """Decide on the waiting visitor: block it (if a block is left) or let the chatbot answer; how and seconds are kept for research."""
     if block and shift["blocks_left"] <= 0:
         raise ValueError("no blocks left")
     if block:
         shift["blocks_left"] -= 1
         shift["blocked"].append(shift["round"]["index"])
-    rounds.step(shift["round"], shift["get_reply"], blocked=block)
+    rounds.step(shift["round"], shift["get_reply"], blocked=block, how=how, seconds=seconds)
 
 
 def finish_shift(shift: dict) -> dict:
@@ -265,5 +265,5 @@ def play_section(section: dict, rules: str, ask_ai=None, blocked: frozenset = fr
     """Play a whole shift at once, blocking the messages whose index is in blocked (tests and quick play)."""
     shift = start_shift(section, rules, ask_ai)
     while shift_pending(shift) is not None:
-        shift_step(shift, block=shift["round"]["index"] in blocked and shift["blocks_left"] > 0)
+        shift_step(shift, block=shift["round"]["index"] in blocked and shift["blocks_left"] > 0, how="auto")
     return finish_shift(shift)

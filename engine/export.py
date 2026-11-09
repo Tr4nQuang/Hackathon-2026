@@ -11,11 +11,10 @@ import io
 import re
 from datetime import datetime, timezone
 
-from engine.storage import EMAIL_PATTERN, PHONE_PATTERN
+from engine.storage import REMOVED, scrub
 
 FORMAT_VERSION = 2  # 2: Siege (word budget, your blocks, trust)
 BOM = "﻿"
-REMOVED = "[removed]"
 FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
 COLUMNS = (
     "format", "run_id", "session_id", "played_at", "section", "business", "grade", "points", "security_pct", "helpfulness_pct",
@@ -28,7 +27,7 @@ COLUMNS = (
 
 def redact(text: str) -> tuple[str, bool]:
     """Return the text with email addresses and phone numbers replaced, and whether anything was replaced."""
-    cleaned = PHONE_PATTERN.sub(REMOVED, EMAIL_PATTERN.sub(REMOVED, text))
+    cleaned = scrub(text)
     return cleaned, cleaned != text
 
 

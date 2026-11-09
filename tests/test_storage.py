@@ -55,7 +55,7 @@ assert storage.build_row(**level_args(mode="level", guide_skipped=True))["guide_
 bad_rows = [
     level_args(mode="arcade"),
     level_args(chosen_rules=None),
-    level_args(player_rules="text in a level row"),
+    level_args(player_rules="x" * 1001),
     endless_args(player_rules=None),
     endless_args(chosen_rules=["be_polite"]),
     endless_args(player_rules="x" * 1001),
@@ -111,4 +111,38 @@ assert storage.record_play(**level_args(chosen_rules=None)) is False
 assert len(storage._client.rows) == 1
 storage._client = FakeTable(fail=True)
 assert storage.record_play(**level_args()) is False
+
+# Level rows keep the rules text now (engine_version 3: every level is written in plain English).
+row = storage.build_row(**level_args(mode="level", player_rules="Never share passwords."))
+assert row["player_rules"] == "Never share passwords." and row["rules_chars"] == 22 and storage.ENGINE_VERSION == "3.0.0"
+
+# A live shift: every visitor is recorded with the decision, the time it took and the outcome.
+from engine.arena import endless as arena  # noqa: E402
+
+shift = arena.start_shift(arena.build_section(1, 7), "Never share passwords.")
+first = arena.shift_pending(shift)
+arena.shift_step(shift, block=True, how="block", seconds=2.345)
+while arena.shift_pending(shift) is not None:
+    arena.shift_step(shift, how="timeout", seconds=None)
+shift_result = arena.finish_shift(shift)
+visits = shift_result["visits"]
+assert len(visits) == len(shift["section"]["messages"])
+assert visits[0]["decision"] == "block" and visits[0]["seconds"] == 2.3 and visits[0]["kind"] == first["kind"]
+assert visits[0]["outcome"] == ("caught" if first["kind"] == "attack" else "turned_away")
+assert all(v["decision"] == "timeout" for v in visits[1:])
+assert sum(v["outcome"] == "leaked" for v in visits) == len(shift_result["tally"]["leaks"])
+assert sum(v["outcome"] in ("refused", "turned_away") for v in visits) == len(shift_result["tally"]["refused"])
+assert all(v["outcome"] in ("caught", "stopped", "leaked", "served", "refused", "turned_away") for v in visits)
+assert all(v["technique"] for v in visits if v["kind"] == "attack")
+
+# Stored visits: scripted chat texts are dropped, live ones are kept with contact details removed.
+stored = storage.research_visits(visits, live=False)
+assert all(v["text"] is None and v["reply"] is None for v in stored) and stored[0]["decision"] == "block"
+live = storage.research_visits([{**visits[1], "text": "I am jo@mail.com", "reply": "Call 780 555 0199"}], live=True)
+assert live[0]["text"] == "I am [removed]" and live[0]["reply"] == "Call [removed]"
+shift_row = storage.build_row(**endless_args(result={**endless_result, "visits": visits, "words": 3, "budget": 22, "blocks_used": 1,
+                                                       "catches": 1, "blocked_customers": 0, "trust_after": 90, "live": False}))
+assert (shift_row["words"], shift_row["word_budget"], shift_row["blocks_used"], shift_row["trust_after"]) == (3, 22, 1, 90)
+assert shift_row["live_ai"] is False and len(shift_row["visits"]) == len(visits)
+assert storage.build_row(**level_args(result={**level_result, "trust_after": 50}))["trust_after"] is None
 print("test_storage OK")

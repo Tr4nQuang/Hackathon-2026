@@ -304,6 +304,10 @@ Function names and return shapes do not change without telling the team.
 
 The Supabase free plan gives 500 MB of Postgres and pauses the project after a week without activity (it can be restored from the dashboard). A tutorial or Level row is about 400 bytes and an Endless row 1 to 2 KB, so space is not a concern. Person A writes engine/storage.py and Person B adds the consent checkbox to the results screen.
 
+> Update for engine_version 3.0.0 (live shifts): Level rows now keep the rules text in player_rules as well, and new columns hold
+> the words, word budget, blocks, VIP and trust results, whether a live AI was used, and `visits` (one record per visitor with the
+> decision, the seconds taken and the outcome). See docs/supabase.sql and README.md. The table below describes the first version.
+
 **One table called plays, one row per finished run.** The mode column separates the modes, and some columns are only filled for one side.
 
 | **Column**                                                      | **Tutorial and Level** | **Endless**                   | **Notes**                                                                                                                                |

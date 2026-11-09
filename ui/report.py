@@ -6,7 +6,8 @@ from ui import common, data, guide
 from ui.common import STAR
 
 GREAT_RULES_TIP = "Even great rules can fail. Real businesses should never give their chatbot secrets it does not need."
-CONSENT_TEXT = "Share my anonymous results to help research. No name or personal data is saved."
+CONSENT_TEXT = ("Share my anonymous results to help research: scores, the rules I wrote, my block choices and, with live AI, "
+                "the chat messages. No name is saved, and email addresses or phone numbers are removed.")
 
 
 def defense_names(kinds: list[str]) -> str:
@@ -117,7 +118,8 @@ def storage_args(result: dict, level: dict) -> dict:
     mode = common.storage_mode(level["id"])
     args = {"mode": mode, "scenario_id": "arena", "level_id": level["id"], "run_id": result["run_id"],
             "session_id": st.session_state["session_id"], "attempt_number": result["attempt"],
-            "result": data.storage_result(result), "grade": data.storage_grade(result), "chosen_rules": result["cov"]}
+            "result": data.storage_result(result), "grade": data.storage_grade(result), "chosen_rules": result["cov"],
+            "player_rules": result["rules"]}
     if mode == "tutorial" and data.get_guide_steps(level):
         args["guide_skipped"] = st.session_state["guide_skipped"]
     return args

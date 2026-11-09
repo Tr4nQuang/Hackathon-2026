@@ -166,13 +166,18 @@ so adding a level means editing JSON. AI replies and player text are shown as pl
 
 Storage is **off unless you set it up**, and the game works exactly the same without it.
 
-- Create a Supabase project, run `docs/supabase.sql` once in its SQL editor, then put `SUPABASE_URL` and
+- Create a Supabase project, run `docs/supabase.sql` once in its SQL editor (its end upgrades an older table), then put `SUPABASE_URL` and
   `SUPABASE_KEY` in `.env`. Use the publishable (anon) key. It can only insert rows and can never read them.
   Never use a service role key.
 - On the report screen (and at the end of an Endless run) there is a checkbox, **unticked by default** and asked again for every run:
-  "Share my anonymous results to help research. No name or personal data is saved."
-- Only if it is ticked, one row is stored for that run: the level, the rules you picked (or, in Endless mode,
-  the rules you wrote, one row per section), the scores and grade, which zones leaked or refused, and the model name for Endless.
+  "Share my anonymous results to help research: scores, the rules I wrote, my block choices and, with live AI, the chat
+  messages. No name is saved, and email addresses or phone numbers are removed."
+- Only if it is ticked, one row is stored per level shift (or per Endless shift): the level, the rules you wrote and the
+  defenses the game read in them, the scores and grade, which zones leaked or turned a customer away, the words used and the
+  budget, your blocks, the VIP and trust results, the game version (`engine_version`), and one record per visitor in `visits`:
+  attack or customer, the attack technique and target, Block, Let it through, Timeout or auto, how many seconds you took, and
+  what happened. The chat texts are stored only when a live AI wrote them (scripted texts are already in the game), with
+  email addresses and phone numbers replaced by `[removed]`.
   No name, nickname or email is stored. The engine skips saving when written rules look like an email address
   or a phone number. A short notice under every rule box asks players not to type real personal information.
 

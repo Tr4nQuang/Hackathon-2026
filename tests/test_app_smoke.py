@@ -485,9 +485,11 @@ def test_consent_is_off_by_default_and_records_once() -> None:
         call, result = recorder.calls[0], at.session_state["result"]
         assert call["mode"] == "level" and call["level_id"] == "level_1" and call["scenario_id"] == "arena"
         assert call["chosen_rules"] == result["cov"] and call["attempt_number"] == 1 and call["run_id"] == run_id
-        assert call["session_id"] == at.session_state["session_id"] and "player_rules" not in call and "guide_skipped" not in call
+        assert call["session_id"] == at.session_state["session_id"] and call["player_rules"] == result["rules"] and "guide_skipped" not in call
         assert uuid.UUID(call["run_id"]) and uuid.UUID(call["session_id"])
-        assert build_row(**call)["mode"] == "level"
+        row = build_row(**call)
+        assert row["mode"] == "level" and row["player_rules"] == result["rules"] and row["visits"] and row["word_budget"]
+        assert all(v["text"] is None for v in row["visits"])  # a level never uses live AI, so no chat text is stored
         assert any("was saved" in c.value for c in at.caption)
         at.checkbox(key=f"consent_{run_id}").uncheck().run()
         at.checkbox(key=f"consent_{run_id}").check().run()
