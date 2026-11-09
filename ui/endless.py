@@ -32,17 +32,48 @@ def new_run(rules: str, seed: int) -> dict:
             "note": "", "seed": seed, "run_id": str(uuid.uuid4()), "confirm_end": False, "saved": "", "stored": False, "sent": False}
 
 
-def add_result(run: dict, result: dict) -> None:
-    """Add a played section to the run: its history row, the score and the cleared count. The chat starts playing next."""
+def add_result(run: dict, result: dict, session_id: str | None = None) -> None:
+    """Add a played section to the run: its history row (with its row for the run file), the score and the cleared count."""
     grade = result["grade"]
     result["run_id"] = str(uuid.uuid4())
-    run["history"].append({"n": result["section"], "world": data.content.get_world(result["world_id"])["short"],
-                           "grade": grade["label"], "points": result["points"], "result": result})
-    run["last"] = result
     if grade["pass"]:
         run["score"] += result["points"]
         run["passed"] += 1
+    row = data.run_file.section_row(result, run["run_id"], session_id or str(uuid.uuid4()), run["score"], data.live.model_name())
+    run["history"].append({"n": result["section"], "world": data.content.get_world(result["world_id"])["short"],
+                           "grade": grade["label"], "points": result["points"], "result": result, "row": row})
+    run["last"] = result
     run["status"] = "playing"
+
+
+def snapshot(run: dict, over: bool = False) -> dict:
+    """Return what the browser keeps of a run: enough to continue it (or to see its result) after the game is closed."""
+    last = run["last"]
+    passed = bool(last and last["grade"]["pass"])
+    over = over or bool(last and not passed)
+    return {"section": run["section"] + (1 if passed and not over else 0), "score": run["score"], "passed": run["passed"],
+            "rules": run["rules"][:progress.MAX_RULES], "seed": run["seed"], "run_id": run["run_id"], "over": over,
+            "history": [{"n": h["n"], "world": h["world"], "grade": h["grade"], "points": h["points"], "row": h["row"]}
+                        for h in run["history"][-progress.MAX_HISTORY:]]}
+
+
+def run_from_saved(saved: dict) -> dict:
+    """Return a run continued from what the browser kept: the next section is still to be played (or the run is over)."""
+    run = new_run(saved["rules"], saved["seed"])
+    run.update(run_id=saved["run_id"], section=saved["section"], score=saved["score"], passed=saved["passed"],
+               status="over" if saved["over"] else "brief",
+               history=[{**row, "result": None} for row in saved["history"]])
+    return run
+
+
+def run_rows(run: dict) -> list[dict]:
+    """Return the run file rows of every section of a run (also those played before the game was closed)."""
+    return [row["row"] for row in run["history"]]
+
+
+def played_rows(run: dict) -> list[dict]:
+    """Return the history rows that still have their full result (replay and anonymous storage need it)."""
+    return [row for row in run["history"] if row.get("result")]
 
 
 def prepare_section(run: dict) -> None:
@@ -61,7 +92,7 @@ def storage_calls(run: dict) -> list[dict]:
     """Return the arguments of engine.storage.record_play for every section of a finished run."""
     model, temperature = data.ai_settings()
     calls = []
-    for row in run["history"]:
+    for row in played_rows(run):
         result = row["result"]
         calls.append({"mode": "endless", "scenario_id": "arena", "level_id": f"endless_{result['world_id']}", "run_id": result["run_id"],
                       "attempt_number": result["section"], "result": data.storage_result(result), "grade": data.storage_grade(result),
@@ -80,6 +111,14 @@ def start_run() -> None:
     """Begin a run with the rules of the last one (or the starting rule)."""
     state = st.session_state
     state["endless"] = new_run(state.get("endless_rules", data.endless.START_RULES), random.randrange(SEED_RANGE))
+
+
+def resume_run() -> None:
+    """Continue the run the browser kept (or open its result when it was over)."""
+    state = st.session_state
+    state["endless"] = run_from_saved(state["saved_run"])
+    state.pop("e_rules", None)
+    common.goto("endless")
 
 
 def next_section() -> None:
@@ -103,7 +142,10 @@ def finish_run() -> None:
     """End the run and show its result. Rules typed but not run yet are kept for the next run."""
     state = st.session_state
     state["endless_rules"] = state.get("e_rules", state.get("endless_rules", data.endless.START_RULES))
-    current().update(status="over", confirm_end=False)
+    run = current()
+    run.update(status="over", confirm_end=False)
+    if run["history"]:
+        progress.save_run(snapshot(run, over=True))
 
 
 def show_report() -> None:
@@ -143,7 +185,8 @@ def run_section() -> None:
     run["rules"] = state["endless_rules"] = state.get("e_rules", run["rules"])
     result = data.endless.play_section(section, run["rules"], data.live.ai_reply if section["live"] else None)
     state["endless_last_run"] = time.monotonic()
-    add_result(run, result)
+    add_result(run, result, state["session_id"])
+    progress.save_run(snapshot(run))
     progress.record_section(result["section"], result["points"], result["grade"]["pass"])
     common.start_playback()
 
@@ -176,8 +219,12 @@ def lobby_screen() -> None:
         for number, text in enumerate(HOW_IT_WORKS, start=1):
             st.markdown(f"**{number}** · {text}")
         st.caption(f"Live AI is on: the attacker and the chatbot are {data.live.model_name()}." if data.live.is_live() else NO_AI_NOTE)
+        saved = st.session_state.get("saved_run")
+        if saved:
+            st.button(f"Continue your run · section {saved['section']} · {saved['score']} points" if not saved["over"] else
+                      f"See your last run · {saved['score']} points", type="primary", key="e_resume", on_click=resume_run, use_container_width=True)
         start, board, _ = st.columns([2, 2, 3])
-        start.button("Start a run", type="primary", key="e_start", on_click=start_run, use_container_width=True)
+        start.button("Start a new run" if saved else "Start a run", type="secondary" if saved else "primary", key="e_start", on_click=start_run, use_container_width=True)
         board.button("Record board", key="e_board", on_click=common.goto, args=("records",), use_container_width=True)
     with points, st.container(key="panel_points"):
         st.subheader("Section points")
@@ -334,6 +381,19 @@ def consent_box(run: dict) -> None:
         st.caption("Thank you, your anonymous results were saved." if run["stored"] else "Storage is not set up here, so nothing was saved.")
 
 
+ADMIN_NOTE = ("Want to help the admin? Download this file and send it to them (for example by email). It has one line per section: "
+              "the rules you wrote, your grades and which parts leaked. It has no name, and email addresses and phone numbers in your "
+              "rules are removed. Nothing is sent from here: you decide whether to send the file.")
+
+
+def admin_file(run: dict) -> None:
+    """Show the run as a CSV file to download and send to the admin (nothing leaves the game unless the player sends it)."""
+    st.markdown("**Send your run to the admin**")
+    st.caption(ADMIN_NOTE)
+    st.download_button("Download run file (CSV)", data=data.run_file.csv_text(run_rows(run)), file_name=data.run_file.file_name(run["run_id"]),
+                       mime="text/csv", key="e_download")
+
+
 def over_screen(run: dict) -> None:
     """Show the result of a finished run, the way to save it to the record board, and the board."""
     sections = run["passed"]
@@ -345,7 +405,9 @@ def over_screen(run: dict) -> None:
         if run["history"]:
             st.dataframe([{"Section": row["n"], "Business": row["world"], "Grade": row["grade"], "Points": row["points"]}
                           for row in run["history"]], hide_index=True, width="stretch")
-            consent_box(run)
+            if played_rows(run):
+                consent_box(run)
+            admin_file(run)
         else:
             st.caption("No sections played.")
         if run["saved"]:
@@ -356,8 +418,8 @@ def over_screen(run: dict) -> None:
             st.button("Save to record board", type="primary", key="e_save_record", on_click=save_to_board)
         again, replay, _ = st.columns([2, 2, 1])
         again.button("Play again", key="e_again", on_click=start_run, use_container_width=True)
-        if run["history"]:
-            replay.button("Watch last replay", key="e_last_replay", on_click=watch_replay, args=(run["history"][-1]["result"],),
+        if played_rows(run):
+            replay.button("Watch last replay", key="e_last_replay", on_click=watch_replay, args=(played_rows(run)[-1]["result"],),
                           use_container_width=True)
     with board, st.container(key="panel_board"):
         records.board_panel()
