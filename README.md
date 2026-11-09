@@ -125,19 +125,28 @@ rules and score. A run that ended is kept as "last run" so you can still see its
 run is replaced when you finish a shift of a new run, and *Start over* on Home (it asks once) clears everything. Leaving in the middle of a shift brings a fresh one
 (different visitors) when you come back. The chat of earlier shifts is not kept, so there is no replay of them after closing.
 
-**Sending your Endless run to the admin.** When a run is over, *Download run file (CSV)* gives one file with one line per
-shift: when it was played, the business, the grade and points, security and helpfulness, how many words and characters
-your rules had and the budget, **the rules you wrote**, which zones leaked or turned a customer away, how many visitors you
-blocked, the trust left, and whether live AI was used. It has
-no name, and anything that looks like an email address or phone number in your rules is replaced by `[removed]`. The file is
-a CSV (UTF-8) so the admin can open it in Excel or Google Sheets. Nothing is sent by the game: you choose whether to send the
-file (for example by email). The admin puts many files together with:
+**Sending your Endless run to the admin.** When a run is over, *Download run file (Excel)* gives one `.xlsx` workbook
+(a preview of every visitor is on the same screen). It opens in Excel, Google Sheets, Numbers or LibreOffice, with frozen
+headers, filters, wrapped text and coloured outcomes:
+
+| Sheet | One row per | What it shows |
+|---|---|---|
+| **Run** | run | how the run ended, score, trust left, attacks blocked / stopped / leaked, attack success %, the technique that leaked most, the zone that leaked most, the defense most often missing from the rules, average words and decision time |
+| **Shifts** | shift | the intel and recon the player read, the attackers' targets and techniques, **the rules the player wrote** (word for word), words / budget, rule warnings, the defenses the rules were missing, blocks, leaks, customers served or turned away, grade, points, trust before and after |
+| **Visitors** | visitor | attacker or customer, technique, target and its ring, **the attacker's script** (or the customer's question), whether it was written by the built-in scripts or the live AI, the defenses that stop it and whether the rules had them, **the player's decision** (Blocked, Let through, Timed out) and how many seconds it took, **the chatbot's reply** and the outcome (Leaked, Stopped by the rules, Blocked by the player, Served...) |
+| **Guide** | column | what every column means |
+
+It has no name, and anything that looks like an email address or phone number in the rules, messages or replies is
+replaced by `[removed]`. Text is always stored as text, never as a formula. Nothing is sent by the game: you choose
+whether to send the file (for example by email). The admin puts many files together with:
 
 ```bash
-python tools/merge_runs.py folder_with_the_files -o all_endless_runs.csv
+python tools/merge_runs.py folder_with_the_files -o all_endless_runs.xlsx
 ```
 
-It skips files that are not run files, keeps a shift that was sent twice only once, sorts by time and prints a short summary.
+It skips files that are not run files (including the CSV files of earlier versions), keeps a run, shift or visitor that
+was sent twice only once, sorts by time, writes one workbook with the same four sheets and prints what stands out: attack
+success, the techniques that leaked most and the defenses players most often forgot.
 
 Even a perfect result carries one honest lesson. Rules in a prompt are only the first layer of defence. The
 best defence is to never give a chatbot a secret it does not need.
@@ -153,7 +162,7 @@ ui/             interface: home, levels (the map of levels) and play.py (a level
                 (shell.py), local files (store.py) and data.py (the only file that talks to engine/)
 .streamlit/     Streamlit theme colours for light and dark (the game follows your system)
 engine/         game logic: engine/arena/ (worlds, attack and customer scripts, the rule reader, rounds,
-                grading, the campaign of levels, Endless and the live AI helpers), the run file (export.py),
+                grading, the campaign of levels, Endless and the live AI helpers), the run file workbook (export.py),
                 the earlier level engine, code judge, save files, optional storage, and call_ai() (every AI call
                 goes through it)
 scenarios/      game content as JSON: the first café scenarios, and scenarios/arena/ (worlds, defenses and
